@@ -50,6 +50,11 @@ def import_chart(
     if '__table' in config['params']['datasource']:
         t = session.query(SqlaTable).filter(SqlaTable.uuid == config['dataset_uuid']).one()
         config['params']['datasource'] = f'{t.id}__table'
+        if qq := config.get('query_context'):
+            qq = json.loads(qq)
+            if (qq.get('datasource') or {}).get('id') is not None:
+                qq['datasource']['id'] = t.id
+                config['query_context'] = json.dumps(qq)
     # TODO (betodealmeida): move this logic to import_from_dict
     config["params"] = json.dumps(config["params"])
 
