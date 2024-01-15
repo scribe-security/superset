@@ -52,7 +52,7 @@ def import_chart(
         config['params']['datasource'] = f'{t.id}__table'
         if qq := config.get('query_context'):
             qq = json.loads(qq)
-            if qq.get('datasource') and qq['datasource'].get('id'):
+            if (qq.get('datasource') or {}).get('id') is not None:
                 qq['datasource']['id'] = t.id
                 config['query_context'] = json.dumps(qq)
     # TODO (betodealmeida): move this logic to import_from_dict
