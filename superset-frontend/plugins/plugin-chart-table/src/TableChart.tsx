@@ -549,11 +549,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           const cellProps = {
             // show raw number in title in case of numeric values
             title: typeof value === 'number' ? String(value) : undefined,
-            onClick: (e: MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              cellClicked(column, row, value);
-            },
+            onClick: () => cellClicked(column, row, value),
             onContextMenu: (e: MouseEvent) => {
               if (handleContextMenu) {
                 e.preventDefault();
