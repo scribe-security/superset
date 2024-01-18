@@ -41,7 +41,6 @@ import {
   DTTM_ALIAS,
   ensureIsArray,
   GenericDataType,
-  getSelectedText,
   getTimeFormatterForGranularity,
   BinaryQueryObjectFilterClause,
   styled,
@@ -468,23 +467,29 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         value: DataRecordValue,
       ) => {
         let isAnchor = false;
+        let parsedValue = value;
         if (typeof value === 'string') {
           const parsed = new DOMParser().parseFromString(value, 'text/html');
           const element = parsed.body.firstChild as HTMLElement;
-          if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
+          if (
+            element?.tagName === 'A' &&
+            element.getAttribute('href') === '#'
+          ) {
             const data = element.getAttribute('data');
             if (data) {
               try {
-                value = JSON.parse(data);
+                parsedValue = JSON.parse(data);
                 isAnchor = true;
-              } catch (error) {}
+              } catch (error) {
+                parsedValue = value;
+              }
             }
           }
         }
         const msg: CellClicked = {
           columnKey: column.key,
           rowIndex: row.index,
-          cellData: value,
+          cellData: parsedValue,
           isAnchor,
         };
         SingletonSwitchboard.emit('CellClicked', msg);
