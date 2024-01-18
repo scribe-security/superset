@@ -50,7 +50,6 @@ import {
   tn,
 } from '@superset-ui/core';
 
-import SingletonSwitchboard from '@superset-ui/switchboard';
 import { DataColumnMeta, TableChartTransformedProps } from './types';
 import DataTable, {
   DataTableProps,
@@ -455,41 +454,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         className += ' dt-is-filter';
       }
 
-      type CellClicked = {
-        columnKey: string;
-        rowIndex: number;
-        cellData: DataRecordValue;
-        isAnchor: boolean;
-      };
-
-      const cellClicked = (
-        column: DataColumnMeta,
-        row: Row<D>,
-        value: DataRecordValue,
-      ) => {
-        let isAnchor = false;
-        if (typeof value === 'string') {
-          const parsed = new DOMParser().parseFromString(value, 'text/html');
-          const element = parsed.body.firstChild as HTMLElement;
-          if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
-            const data = element.getAttribute('data');
-            if (data) {
-              try {
-                value = JSON.parse(data);
-                isAnchor = true;
-              } catch (error) {}
-            }
-          }
-        }
-        const msg: CellClicked = {
-          columnKey: column.key,
-          rowIndex: row.index,
-          cellData: value,
-          isAnchor,
-        };
-        SingletonSwitchboard.emit('CellClicked', msg);
-      };
-
       return {
         id: String(i), // to allow duplicate column keys
         // must use custom accessor to allow `.` in column names
@@ -549,11 +513,15 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           const cellProps = {
             // show raw number in title in case of numeric values
             title: typeof value === 'number' ? String(value) : undefined,
-            onClick: (e: MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              cellClicked(column, row, value);
-            },
+            onClick:
+              emitCrossFilters && !valueRange && !isMetric
+                ? () => {
+                    // allow selecting text in a cell
+                    if (!getSelectedText()) {
+                      toggleFilter(key, value);
+                    }
+                  }
+                : undefined,
             onContextMenu: (e: MouseEvent) => {
               if (handleContextMenu) {
                 e.preventDefault();
