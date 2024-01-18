@@ -41,6 +41,7 @@ import { areObjectsEqual } from '../../reduxUtils';
 import getLocationHash from '../util/getLocationHash';
 import isDashboardEmpty from '../util/isDashboardEmpty';
 import { getAffectedOwnDataCharts } from '../util/charts/getOwnDataCharts';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 
 const propTypes = {
   actions: PropTypes.shape({
@@ -269,6 +270,7 @@ class Dashboard extends React.PureComponent {
     this.refreshCharts([...new Set(affectedChartIds)]);
     this.appliedFilters = activeFilters;
     this.appliedOwnDataCharts = ownDataCharts;
+    SingletonSwitchboard.emit('FiltersApplied', activeFilters);
   }
 
   refreshCharts(ids) {
