@@ -19,6 +19,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { isFeatureEnabled, t, FeatureFlag } from '@superset-ui/core';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 
 import { PluginContext } from 'src/components/DynamicPlugins';
 import Loading from 'src/components/Loading';
@@ -41,7 +42,6 @@ import { areObjectsEqual } from '../../reduxUtils';
 import getLocationHash from '../util/getLocationHash';
 import isDashboardEmpty from '../util/isDashboardEmpty';
 import { getAffectedOwnDataCharts } from '../util/charts/getOwnDataCharts';
-import SingletonSwitchboard from '@superset-ui/switchboard';
 
 const propTypes = {
   actions: PropTypes.shape({
