@@ -734,7 +734,14 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         if (i === columnsUnderHeader[columnsUnderHeader.length - 1]) {
           className += ' right-border-only';
         }
-      }
+        const msg: CellClicked = {
+          columnKey: column.key,
+          rowIndex: row.index,
+          cellData: parsedValue,
+          isAnchor,
+        };
+        SingletonSwitchboard.emit('CellClicked', msg);
+      };
 
       return {
         id: String(i), // to allow duplicate column keys
