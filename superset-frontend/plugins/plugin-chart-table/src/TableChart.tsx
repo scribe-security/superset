@@ -499,7 +499,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           isAnchor,
         };
         SingletonSwitchboard.emit('CellClicked', msg);
-      };      
+      };
 
       return {
         id: String(i), // to allow duplicate column keys
