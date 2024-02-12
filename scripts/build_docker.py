@@ -23,12 +23,12 @@ from textwrap import dedent
 
 import click
 
-REPO = "apache/superset"
+REPO = "scribesecurity/superset"
 CACHE_REPO = f"{REPO}-cache"
 BASE_PY_IMAGE = "3.10-slim-bookworm"
 
 
-def run_cmd(command: str, raise_on_failure: bool = True) -> str:
+def run_cmd(command: str) -> str:
     process = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
@@ -41,8 +41,9 @@ def run_cmd(command: str, raise_on_failure: bool = True) -> str:
 
     process.wait()  # Wait for the subprocess to finish
 
-    if process.returncode != 0 and raise_on_failure:
+    if process.returncode != 0:
         raise subprocess.CalledProcessError(process.returncode, command, output)
+
     return output
 
 
@@ -72,17 +73,11 @@ def get_build_context_ref(build_context: str) -> str:
 
 
 def is_latest_release(release: str) -> bool:
-    output = (
-        run_cmd(
-            f"./scripts/tag_latest_release.sh {release} --dry-run",
-            raise_on_failure=False,
-        )
-        or ""
-    )
+    output = run_cmd(f"./scripts/tag_latest_release.sh {release} --dry-run") or ""
     return "SKIP_TAG::false" in output
 
 
-def make_docker_tag(l: list[str]) -> str:  # noqa: E741
+def make_docker_tag(l: list[str]) -> str:
     return f"{REPO}:" + "-".join([o for o in l if o])
 
 
