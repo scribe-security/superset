@@ -41,7 +41,6 @@ import {
   DTTM_ALIAS,
   ensureIsArray,
   GenericDataType,
-  getSelectedText,
   getTimeFormatterForGranularity,
   BinaryQueryObjectFilterClause,
   styled,
@@ -50,6 +49,7 @@ import {
   tn,
 } from '@superset-ui/core';
 
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { DataColumnMeta, TableChartTransformedProps } from './types';
 import DataTable, {
   DataTableProps,
@@ -460,6 +460,47 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         className += ' dt-is-filter';
       }
 
+      type CellClicked = {
+        columnKey: string;
+        rowIndex: number;
+        cellData: DataRecordValue;
+        isAnchor: boolean;
+      };
+
+      const cellClicked = (
+        column: DataColumnMeta,
+        row: Row<D>,
+        value: DataRecordValue,
+      ) => {
+        let isAnchor = false;
+        let parsedValue = value;
+        if (typeof value === 'string') {
+          const parsed = new DOMParser().parseFromString(value, 'text/html');
+          const element = parsed.body.firstChild as HTMLElement;
+          if (
+            element?.tagName === 'A' &&
+            element.getAttribute('href') === '#'
+          ) {
+            const data = element.getAttribute('data');
+            if (data) {
+              try {
+                parsedValue = JSON.parse(data);
+                isAnchor = true;
+              } catch (error) {
+                parsedValue = value;
+              }
+            }
+          }
+        }
+        const msg: CellClicked = {
+          columnKey: column.key,
+          rowIndex: row.index,
+          cellData: parsedValue,
+          isAnchor,
+        };
+        SingletonSwitchboard.emit('CellClicked', msg);
+      };      
+
       return {
         id: String(i), // to allow duplicate column keys
         // must use custom accessor to allow `.` in column names
@@ -519,15 +560,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           const cellProps = {
             // show raw number in title in case of numeric values
             title: typeof value === 'number' ? String(value) : undefined,
-            onClick:
-              emitCrossFilters && !valueRange && !isMetric
-                ? () => {
-                    // allow selecting text in a cell
-                    if (!getSelectedText()) {
-                      toggleFilter(key, value);
-                    }
-                  }
-                : undefined,
+            onClick: () => cellClicked(column, row, value),
             onContextMenu: (e: MouseEvent) => {
               if (handleContextMenu) {
                 e.preventDefault();

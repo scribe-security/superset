@@ -19,6 +19,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { isFeatureEnabled, t, FeatureFlag } from '@superset-ui/core';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 
 import { PluginContext } from 'src/components/DynamicPlugins';
 import Loading from 'src/components/Loading';
@@ -269,6 +270,7 @@ class Dashboard extends React.PureComponent {
     this.refreshCharts([...new Set(affectedChartIds)]);
     this.appliedFilters = activeFilters;
     this.appliedOwnDataCharts = ownDataCharts;
+    SingletonSwitchboard.emit('FiltersApplied', activeFilters);
   }
 
   refreshCharts(ids) {

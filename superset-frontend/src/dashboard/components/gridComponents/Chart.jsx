@@ -325,11 +325,11 @@ class Chart extends React.Component {
   };
 
   exportFullCSV() {
-    this.exportCSV(true);
+    this.exportTable('csv', true);
   }
 
-  exportCSV(isFullCSV = false) {
-    this.exportTable('csv', isFullCSV);
+  exportCSV() {
+    this.exportTable('csv', false);
   }
 
   exportXLSX() {
@@ -351,7 +351,11 @@ class Chart extends React.Component {
     });
     exportChart({
       formData: isFullCSV
-        ? { ...this.props.formData, row_limit: this.props.maxRows }
+        ? {
+            ...this.props.formData,
+            row_limit: this.props.maxRows,
+            server_pagination: false,
+          }
         : this.props.formData,
       resultType: 'full',
       resultFormat: format,
