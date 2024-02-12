@@ -3,9 +3,8 @@ name: Scribe Docker Release
 on:
   workflow_dispatch:
     inputs:
-      release:
+      release_index:
         required: true
-        description: The version to generate
 
 jobs:
   docker-build:
@@ -38,5 +37,5 @@ jobs:
           ./scripts/build_docker.py \
             ${{ matrix.build_preset }} \
             "release" \
-            --build_context_ref "$RELEASE" \
+            --build_context_ref "${{ github.ref_name }}-${{ inputs.release_index }}" \
             --platform ${{ matrix.platform }}
