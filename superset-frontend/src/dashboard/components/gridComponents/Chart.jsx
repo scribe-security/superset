@@ -22,6 +22,7 @@ import PropTypes from 'prop-types';
 import { styled, t, logging } from '@superset-ui/core';
 import { debounce, isEqual } from 'lodash';
 import { withRouter } from 'react-router-dom';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 
 import { exportChart, mountExploreUrl } from 'src/explore/exploreUtils';
 import ChartContainer from 'src/components/Chart/ChartContainer';
@@ -147,6 +148,7 @@ class Chart extends React.Component {
     this.setHeaderRef = this.setHeaderRef.bind(this);
     this.getChartHeight = this.getChartHeight.bind(this);
     this.getDescriptionHeight = this.getDescriptionHeight.bind(this);
+    this.handleClick = this.handleClick.bind(this);
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -376,6 +378,19 @@ class Chart extends React.Component {
     );
   }
 
+  handleClick(event) {
+    const msg = {
+      dashboardId: this.props.dashboardId,
+      componentId: this.props.componentId,
+      chartId: this.props.chart.id,
+      chartName: this.props.slice.slice_name,
+      chartTitle: this.props.sliceName,
+      clickX: event.nativeEvent.clientX,
+      clickY: event.nativeEvent.clientY,
+    };
+    SingletonSwitchboard.emit('DashboardChartClicked', msg);
+  }
+
   render() {
     const {
       id,
@@ -498,6 +513,7 @@ class Chart extends React.Component {
             'dashboard-chart',
             isOverflowable && 'dashboard-chart--overflowable',
           )}
+          onClick={this.handleClick}
         >
           {isLoading && (
             <ChartOverlay
