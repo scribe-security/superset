@@ -1,4 +1,4 @@
-name: Docker for Scribe Demo
+name: Docker_for_Scribe_Demo
 
 on:
   workflow_dispatch:
