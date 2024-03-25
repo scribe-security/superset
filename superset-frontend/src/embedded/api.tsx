@@ -66,11 +66,18 @@ const getDashboardPermalink = async ({
 
 const setActiveTabByName = (tabName: string) => {
   const tabs = document.querySelectorAll('.ant-tabs-tab');
+  let isTabExist = false;
   tabs.forEach(tab => {
-    if (tab.textContent?.toLowerCase().includes(tabName.toLowerCase())) {
+    const tabNameLowerCase = tab.textContent?.toLowerCase().trim();
+    if (isTabExist) return;
+    if (tabNameLowerCase === tabName.toLowerCase().trim()) {
+      isTabExist = true;
       (tab as HTMLElement).click();
     }
   });
+  if (!isTabExist) {
+    console.error(`Tab with name ${tabName} does not exist`);
+  }
 };
 
 const getActiveTabs = () => store?.getState()?.dashboardState?.activeTabs || [];
