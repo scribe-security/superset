@@ -17,8 +17,9 @@
  * under the License.
  */
 import getBootstrapData from 'src/utils/getBootstrapData';
-import { store } from '../views/store';
-import { getDashboardPermalink as getDashboardPermalinkUtil } from '../utils/urlUtils';
+import {store} from '../views/store';
+import {getDashboardPermalink as getDashboardPermalinkUtil} from '../utils/urlUtils';
+
 
 const bootstrapData = getBootstrapData();
 
@@ -29,22 +30,26 @@ type Size = {
 
 type EmbeddedSupersetApi = {
   getScrollSize: () => Size;
-  getDashboardPermalink: ({ anchor }: { anchor: string }) => Promise<string>;
+  getDashboardPermalink: ({anchor}: { anchor: string }) => Promise<string>;
   getActiveTabs: () => string[];
+  setActiveTabByName: (tabName: string) => void;
+  getDashboardState: () => Record<string, unknown>;
 };
 
-const getScrollSize = (): Size => ({
-  width: document.body.scrollWidth,
-  height: document.body.scrollHeight,
-});
+const getScrollSize = (): Size => {
+  return {
+    width: document.body.scrollWidth,
+    height: document.body.scrollHeight,
+  }
+}
 
 const getDashboardPermalink = async ({
-  anchor,
-}: {
+                                       anchor,
+                                     }: {
   anchor: string;
 }): Promise<string> => {
   const state = store?.getState();
-  const { dashboardId, dataMask, activeTabs } = {
+  const {dashboardId, dataMask, activeTabs} = {
     dashboardId:
       state?.dashboardInfo?.id || bootstrapData?.embedded!.dashboard_id,
     dataMask: state?.dataMask,
@@ -59,10 +64,32 @@ const getDashboardPermalink = async ({
   });
 };
 
+const setActiveTabByName = (tabName: string) => {
+  const tabs = document.querySelectorAll('.ant-tabs-tab');
+  let isTabExist = false;
+  tabs.forEach(tab => {
+    const tabNameLowerCase = tab.textContent?.toLowerCase().trim();
+    if (isTabExist) return;
+    if (tabNameLowerCase === tabName.toLowerCase().trim()) {
+      isTabExist = true;
+      (tab as HTMLElement).click();
+    }
+  });
+  if (!isTabExist) {
+    console.error(`Tab with name ${tabName} does not exist`);
+  }
+};
+
 const getActiveTabs = () => store?.getState()?.dashboardState?.activeTabs || [];
+
+const getDashboardState = () => {
+  return store?.getState()?.dashboardState || []
+};
 
 export const embeddedApi: EmbeddedSupersetApi = {
   getScrollSize,
   getDashboardPermalink,
   getActiveTabs,
+  getDashboardState,
+  setActiveTabByName,
 };

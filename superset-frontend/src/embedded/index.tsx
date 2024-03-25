@@ -16,22 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import React, { lazy, Suspense } from 'react';
+import React, {lazy, Suspense} from 'react';
 import ReactDOM from 'react-dom';
-import { BrowserRouter as Router, Route } from 'react-router-dom';
-import { makeApi, t, logging } from '@superset-ui/core';
+import {BrowserRouter as Router, Route} from 'react-router-dom';
+import {logging, makeApi, t} from '@superset-ui/core';
 import Switchboard from '@superset-ui/switchboard';
 import getBootstrapData from 'src/utils/getBootstrapData';
 import setupClient from 'src/setup/setupClient';
 import setupPlugins from 'src/setup/setupPlugins';
-import { RootContextProviders } from 'src/views/RootContextProviders';
-import { store, USER_LOADED } from 'src/views/store';
+import {RootContextProviders} from 'src/views/RootContextProviders';
+import {store, USER_LOADED} from 'src/views/store';
 import ErrorBoundary from 'src/components/ErrorBoundary';
 import Loading from 'src/components/Loading';
-import { addDangerToast } from 'src/components/MessageToasts/actions';
+import {addDangerToast} from 'src/components/MessageToasts/actions';
 import ToastContainer from 'src/components/MessageToasts/ToastContainer';
-import { UserWithPermissionsAndRoles } from 'src/types/bootstrapTypes';
-import { embeddedApi } from './api';
+import {UserWithPermissionsAndRoles} from 'src/types/bootstrapTypes';
+import {embeddedApi} from './api';
 
 setupPlugins();
 
@@ -48,16 +48,16 @@ const LazyDashboardPage = lazy(
   () =>
     import(
       /* webpackChunkName: "DashboardPage" */ 'src/dashboard/containers/DashboardPage'
-    ),
+      ),
 );
 
 const EmbeddedRoute = () => (
-  <Suspense fallback={<Loading />}>
+  <Suspense fallback={<Loading/>}>
     <RootContextProviders>
       <ErrorBoundary>
-        <LazyDashboardPage idOrSlug={bootstrapData.embedded!.dashboard_id} />
+        <LazyDashboardPage idOrSlug={bootstrapData.embedded!.dashboard_id}/>
       </ErrorBoundary>
-      <ToastContainer position="top" />
+      <ToastContainer position="top"/>
     </RootContextProviders>
   </Suspense>
 );
@@ -65,8 +65,8 @@ const EmbeddedRoute = () => (
 const EmbeddedApp = () => (
   <Router>
     {/* todo (embedded) remove this line after uuids are deployed */}
-    <Route path="/dashboard/:idOrSlug/embedded/" component={EmbeddedRoute} />
-    <Route path="/embedded/:uuid/" component={EmbeddedRoute} />
+    <Route path="/dashboard/:idOrSlug/embedded/" component={EmbeddedRoute}/>
+    <Route path="/embedded/:uuid/" component={EmbeddedRoute}/>
   </Router>
 );
 
@@ -126,7 +126,7 @@ function start() {
     endpoint: '/api/v1/me/roles/',
   });
   return getMeWithRole().then(
-    ({ result }) => {
+    ({result}) => {
       // fill in some missing bootstrap data
       // (because at pageload, we don't have any auth yet)
       // this allows the frontend's permissions checks to work.
@@ -135,7 +135,7 @@ function start() {
         type: USER_LOADED,
         user: result,
       });
-      ReactDOM.render(<EmbeddedApp />, appMountPoint);
+      ReactDOM.render(<EmbeddedApp/>, appMountPoint);
     },
     err => {
       // something is most likely wrong with the guest token
@@ -190,7 +190,7 @@ window.addEventListener('message', function embeddedPageInitializer(event) {
 
     Switchboard.defineMethod(
       'guestToken',
-      ({ guestToken }: { guestToken: string }) => {
+      ({guestToken}: { guestToken: string }) => {
         setupGuestClient(guestToken);
         if (!started) {
           start();
@@ -205,8 +205,10 @@ window.addEventListener('message', function embeddedPageInitializer(event) {
       embeddedApi.getDashboardPermalink,
     );
     Switchboard.defineMethod('getActiveTabs', embeddedApi.getActiveTabs);
+    Switchboard.defineMethod('getDashboardState', embeddedApi.getDashboardState);
+    Switchboard.defineMethod('setActiveTabByName', embeddedApi.setActiveTabByName);
     Switchboard.start();
   }
-});
+},);
 
 log('embed page is ready to receive messages');
