@@ -390,7 +390,6 @@ class Chart extends Component {
       dashboardId: this.props.dashboardId,
       componentId: this.props.componentId,
       chartId: this.props.chart.id,
-      chartDescription: this.props.slice.description || '',
       chartName: this.props.slice.slice_name,
       chartTitle: this.props.sliceName,
       clickX: event.nativeEvent.clientX,
