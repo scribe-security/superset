@@ -23,6 +23,7 @@ import { connect } from 'react-redux';
 import { LineEditableTabs } from 'src/components/Tabs';
 import { LOG_ACTIONS_SELECT_DASHBOARD_TAB } from 'src/logger/LogUtils';
 import { AntdModal } from 'src/components';
+import SingletonSwitchboard from "@superset-ui/switchboard";
 import DragDroppable from '../dnd/DragDroppable';
 import DragHandle from '../dnd/DragHandle';
 import DashboardComponent from '../../containers/DashboardComponent';
@@ -126,6 +127,7 @@ export class Tabs extends React.PureComponent {
 
   componentDidMount() {
     this.props.setActiveTab(this.state.activeKey);
+    SingletonSwitchboard.emit('TabDidMount', {activeKey: this.state.activeKey});
   }
 
   componentDidUpdate(prevProps, prevState) {
