@@ -1,22 +1,16 @@
 name: Docker_for_Scribe_Demo
-
 on:
   workflow_dispatch:
-    inputs:
-      release:
-        required: true
-        description: The version to generate
-      git-ref:
-        required: true
-        description: The git reference to checkout prior to running the docker build
-      force-latest:
-        required: true
-        type: choice
-        default: 'false'
-        description: Whether to force a latest tag on the release
-        options:
-          - true
-          - false
+
+ env:
+  SCRIBE_CLIENT_ID: ${{ secrets.CLIENT_ID }}
+  SCRIBE_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+  # COMPANY_CA: ${{ secrets.COMPANY_CA }}
+  # SIGNER_CERT: ${{ secrets.SIGNER_CERT }}
+  # SIGNER_KEY: ${{ secrets.SIGNER_KEY }}
+  # APP_IMAGE: prod-images.mgti-dal-so-art.mrshmc.com/whitehat-assets-onboading/api:1.1.100
+  PRODUCT_KEY: superset-for-scribe
+  GITHUB_RUN_ID: ${{ github.run_id }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -33,9 +27,22 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: install valint
+        run: curl -sSfL https://get.scribesecurity.com/install.sh  | sh -s -- -t valint
 
+      - name: sbom attest git
+        run: |
+         $HOME/.scribe/bin/valint bom git:. \
+         --components packages,files,dep \
+         --format attest \
+         --scribe.enable \
+         --scribe.client-id $SCRIBE_CLIENT_ID \
+         --scribe.client-secret $SCRIBE_CLIENT_SECRET \
+         --product-key $PRODUCT_KEY \
+         --force \
+         --verbose 2 \
+         --context-type "github"
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
