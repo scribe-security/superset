@@ -57,4 +57,4 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           pip install click
-          ./scripts/build_docker.py ${{ matrix.build_preset }} ${{ github.event_name }} --platform ${{ matrix.platform }}
+          ./scripts/build_docker.py ${{ matrix.build_preset }} "release" --platform "linux/amd64"
