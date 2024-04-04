@@ -57,4 +57,4 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           pip install click
-          ./scripts/build_docker.py py310 release --platform linux/amd64
+          ./scripts/build_docker.py py310 push --platform linux/amd64
