@@ -45,5 +45,6 @@ jobs:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          pip install click
-          ./scripts/build_docker.py py310 push --platform linux/amd64
+          docker build -t superset:test1 .
+          #pip install click
+          #./scripts/build_docker.py py310 push --platform linux/amd64
