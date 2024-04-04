@@ -2,6 +2,21 @@ name: Docker_for_Scribe_Demo
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        required: true
+        description: The version to generate
+      git-ref:
+        required: true
+        description: The git reference to checkout prior to running the docker build
+      force-latest:
+        required: true
+        type: choice
+        default: 'false'
+        description: Whether to force a latest tag on the release
+        options:
+          - true
+          - false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
