@@ -2,7 +2,7 @@ name: Docker_for_Scribe_Demo
 on:
   workflow_dispatch:
 
- env:
+env:
   SCRIBE_CLIENT_ID: ${{ secrets.CLIENT_ID }}
   SCRIBE_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
   # COMPANY_CA: ${{ secrets.COMPANY_CA }}
