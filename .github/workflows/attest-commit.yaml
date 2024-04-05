@@ -45,6 +45,6 @@ jobs:
          --force \
          --verbose 2 \
          --context-type "github" \
-         --label: "is_git_commit"
+         --label "is_git_commit"
         
      
