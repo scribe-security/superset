@@ -42,6 +42,7 @@ jobs:
          --scribe.client-id $SCRIBE_CLIENT_ID \
          --scribe.client-secret $SCRIBE_CLIENT_SECRET \
          --product-key $PRODUCT_KEY \
+         --product-version v1.0.$(date +%d-%m-%Y) \
          --force \
          --verbose 2 \
          --context-type "github"
@@ -67,6 +68,7 @@ jobs:
          --scribe.client-id $SCRIBE_CLIENT_ID \
          --scribe.client-secret $SCRIBE_CLIENT_SECRET \
          --product-key $PRODUCT_KEY \
+         --product-version v1.0.$(date +%d-%m-%Y) \
          --force \
          --verbose 2 \
          --context-type "github"
