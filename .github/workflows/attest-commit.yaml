@@ -1,0 +1,50 @@
+name: Attest_commit_Scribe_Demo
+on:
+  workflow_dispatch:
+
+env:
+  SCRIBE_CLIENT_ID: ${{ secrets.CLIENT_ID }}
+  SCRIBE_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+  # COMPANY_CA: ${{ secrets.COMPANY_CA }}
+  # SIGNER_CERT: ${{ secrets.SIGNER_CERT }}
+  # SIGNER_KEY: ${{ secrets.SIGNER_KEY }}
+  # APP_IMAGE: prod-images.mgti-dal-so-art.mrshmc.com/whitehat-assets-onboading/api:1.1.100
+  PRODUCT_KEY: superset-for-scribe
+  GITHUB_RUN_ID: ${{ github.run_id }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  docker-build:
+    name: docker-build
+    runs-on: ubuntu-latest
+    permissions:
+        contents: read
+        id-token: write
+   
+    steps:
+      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: install valint
+        run: curl -sSfL https://get.scribesecurity.com/install.sh  | sh -s -- -t valint
+
+      - name: sbom attest git
+        run: |
+         $HOME/.scribe/bin/valint bom git:. \
+         --components packages,files,dep \
+         --format attest \
+         --scribe.enable \
+         --scribe.client-id $SCRIBE_CLIENT_ID \
+         --scribe.client-secret $SCRIBE_CLIENT_SECRET \
+         --product-key $PRODUCT_KEY \
+         --force \
+         --verbose 2 \
+         --context-type "github"
+         --label: "is_git_commit"
+        
+     
