@@ -44,7 +44,7 @@ jobs:
          --product-key $PRODUCT_KEY \
          --force \
          --verbose 2 \
-         --context-type "github"
-         --lable: "is_git_commit"
+         --context-type "github" \
+         --label: "is_git_commit"
         
      
