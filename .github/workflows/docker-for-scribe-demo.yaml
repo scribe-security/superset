@@ -55,4 +55,16 @@ jobs:
           docker build -t superset:test1 .
           #pip install click
           #./scripts/build_docker.py py310 push --platform linux/amd64
+      - name: sbom attest image
+        run: |
+         $HOME/.scribe/bin/valint bom superset:test1  \
+         --components packages,files,dep \
+         --format attest \
+         --scribe.enable \
+         --scribe.client-id $SCRIBE_CLIENT_ID \
+         --scribe.client-secret $SCRIBE_CLIENT_SECRET \
+         --product-key $PRODUCT_KEY \
+         --force \
+         --verbose 2 \
+         --context-type "github"
         
