@@ -20,6 +20,9 @@ jobs:
   docker-build:
     name: docker-build
     runs-on: ubuntu-latest
+    permissions:
+        contents: read
+        id-token: write
    
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
