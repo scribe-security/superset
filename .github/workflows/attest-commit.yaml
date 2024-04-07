@@ -48,7 +48,7 @@ jobs:
          --label "is_git_commit" \
          --scribe.url "https://api.dev.scribesecurity.com" \
          --scribe.auth.audience "api.dev.scribesecurity.com" \ 
-         --scribe.login-url "https://scribe-hub-dev.us.auth0.com"
+         --login-url "https://scribe-hub-dev.us.auth0.com"
      
         
      
