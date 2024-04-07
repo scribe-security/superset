@@ -46,6 +46,9 @@ jobs:
          --force \
          --verbose 2 \
          --context-type "github"
+         --scribe.url "https://api.dev.scribesecurity.com" \
+         --scribe.auth.audience "api.dev.scribesecurity.com" \ 
+         #--scribe.login-url "https://scribe-hub-dev.us.auth0.com"
         
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -72,4 +75,7 @@ jobs:
          --force \
          --verbose 2 \
          --context-type "github"
+         --scribe.url "https://api.dev.scribesecurity.com" \
+         --scribe.auth.audience "api.dev.scribesecurity.com" \ 
+         #--scribe.login-url "https://scribe-hub-dev.us.auth0.com"
         
