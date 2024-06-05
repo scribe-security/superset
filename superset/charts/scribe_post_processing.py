@@ -34,6 +34,8 @@ def process_col(col):
 
 def apply_scribe_post_process(data, is_csv_format):
     if is_csv_format:
+        if data == "\n":
+            return data
         df = pd.read_csv(StringIO(data))
     else:
         df = pd.read_excel(BytesIO(data))
