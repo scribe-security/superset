@@ -44,7 +44,7 @@ export default {
   decorators: [withKnobs, withResizableChartDemo],
 };
 
-export const Timeseries = ({ width, height }) => {
+export const Timeseries = ({ width, height, onClickListener }) => {
   const forecastEnabled = boolean('Enable forecast', true);
   const queryData = data
     .map(row =>
@@ -64,6 +64,7 @@ export const Timeseries = ({ width, height }) => {
       chartType="echarts-timeseries"
       width={width}
       height={height}
+      onClickListener={onClickListener}
       queriesData={[
         { data: queryData, colnames: ['__timestamp'], coltypes: [2] },
       ]}
@@ -93,9 +94,10 @@ export const Timeseries = ({ width, height }) => {
   );
 };
 
-export const WithNegativeNumbers = ({ width, height }) => (
+export const WithNegativeNumbers = ({ width, height, onClickListener }) => (
   <SuperChart
     chartType="echarts-timeseries"
+    onClickListener={onClickListener}
     width={width}
     height={height}
     queriesData={[
@@ -123,8 +125,9 @@ export const WithNegativeNumbers = ({ width, height }) => (
   />
 );
 
-export const ConfidenceBand = ({ width, height }) => (
+export const ConfidenceBand = ({ width, height, onClickListener }) => (
   <SuperChart
+    onClickListener={onClickListener}
     chartType="echarts-timeseries"
     width={width}
     height={height}
@@ -149,10 +152,11 @@ export const ConfidenceBand = ({ width, height }) => (
   />
 );
 
-export const StackWithNulls = ({ width, height }) => (
+export const StackWithNulls = ({ width, height, onClickListener }) => (
   <SuperChart
     chartType="echarts-timeseries"
     width={width}
+    onClickListener={onClickListener}
     height={height}
     queriesData={[
       {
