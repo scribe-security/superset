@@ -217,7 +217,7 @@ class Chart extends React.Component {
   }
 
   componentDidMount() {
-    if (this.props.isExpanded) {
+    if (this?.props?.isExpanded) {
       const descriptionHeight = this.getDescriptionHeight();
       this.setState({ descriptionHeight });
     }
@@ -228,7 +228,7 @@ class Chart extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.isExpanded !== prevProps.isExpanded) {
+    if (this?.props?.isExpanded !== prevProps.isExpanded) {
       const descriptionHeight = this.getDescriptionHeight();
       // eslint-disable-next-line react/no-did-update-set-state
       this.setState({ descriptionHeight });
@@ -236,7 +236,7 @@ class Chart extends React.Component {
   }
 
   getDescriptionHeight() {
-    return this.props.isExpanded && this.descriptionRef
+    return this.props?.isExpanded && this.descriptionRef
       ? this.descriptionRef.offsetHeight
       : 0;
   }
@@ -392,6 +392,40 @@ class Chart extends React.Component {
     SingletonSwitchboard.emit('DashboardChartClicked', msg);
   }
 
+  handleClickBar = event => {
+    const msg = {
+      name: event.name,
+      data: event.data,
+      dataType: event.dataType,
+      dashboardId: this.props.dashboardId,
+      componentId: this.props.componentId,
+      chartId: this.props.chart.id,
+      chartDescription: this.props.slice.description || '',
+      chartName: this.props.slice.slice_name,
+      chartTitle: this.props.sliceName,
+    };
+    SingletonSwitchboard.emit('DashboardBarClicked', msg);
+  };
+
+  handleTitleClick({ e, title, slice }) {
+    if (!slice?.description) {
+      return;
+    }
+    const msg = {
+      title,
+      name: e.name,
+      data: e.data,
+      dataType: e.dataType,
+      // dashboardId: this.props.dashboardId,
+      // componentId: this.props.componentId,
+      // chartId: this.props.chart.id,
+      chartDescription: slice.description || '',
+      chartName: slice.slice_name,
+      chartTitle: title,
+    };
+    SingletonSwitchboard.emit('ChartTitleClicked', msg);
+  }
+
   render() {
     const {
       id,
@@ -491,6 +525,8 @@ class Chart extends React.Component {
           formData={formData}
           width={width}
           height={this.getHeaderHeight()}
+          description={slice?.description}
+          onTitleClick={params => this.handleTitleClick({ ...params, slice })}
         />
 
         {/*
@@ -552,6 +588,7 @@ class Chart extends React.Component {
             datasetsStatus={datasetsStatus}
             isInView={isInView}
             emitCrossFilters={emitCrossFilters}
+            onClickListener={this.handleClickBar}
           />
         </ChartWrapper>
       </SliceContainer>
