@@ -39,6 +39,7 @@ export interface EditableTitleProps {
   certifiedBy?: string;
   certificationDetails?: string;
   url?: string;
+  onClick?: ({ e, title }: { e: any; title: string }) => void;
 }
 
 const StyledCertifiedBadge = styled(CertifiedBadge)`
@@ -60,6 +61,7 @@ export default function EditableTitle({
   certifiedBy,
   certificationDetails,
   url,
+  onClick: onClickLocal,
   // rest is related to title tooltip
   ...rest
 }: EditableTitleProps) {
@@ -77,7 +79,7 @@ export default function EditableTitle({
       setLastTitle(currentTitle);
       setCurrentTitle(title);
     }
-  }, [title]);
+  }, [currentTitle, title]);
 
   useEffect(() => {
     if (isEditing) {
@@ -92,6 +94,16 @@ export default function EditableTitle({
     }
   }, [isEditing]);
 
+  const onClick = (event: React.MouseEvent) => {
+    onClickLocal?.({
+      e: event,
+      title: currentTitle,
+    });
+    // const msg = {
+    //   currentTitle,
+    // };
+    // SingletonSwitchboard.emit('ChartTitleClicked', msg);
+  };
   function handleClick() {
     if (!canEdit || isEditing) {
       return;
@@ -226,6 +238,7 @@ export default function EditableTitle({
         css={(theme: SupersetTheme) => css`
           color: ${theme.colors.grayscale.dark1};
           text-decoration: none;
+
           :hover {
             text-decoration: underline;
           }
@@ -234,7 +247,10 @@ export default function EditableTitle({
         {value}
       </Link>
     ) : (
-      <span data-test="editable-title-input">{value}</span>
+      // eslint-disable-next-line jsx-a11y/interactive-supports-focus
+      <div role="button" onClick={onClick} data-test="editable-title-input">
+        {value}
+      </div>
     );
   }
   return (
