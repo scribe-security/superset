@@ -174,11 +174,13 @@ class SuperChart extends PureComponent<Props, {}> {
       enableNoResults,
       noResults,
       theme,
+      onClickListener,
       ...rest
     } = this.props as PropsWithDefault;
 
     const chartProps = this.createChartProps({
       ...rest,
+      onClickListener,
       queriesData,
       height,
       width,

@@ -42,9 +42,11 @@ type SliceHeaderProps = SliceHeaderControlsProps & {
   sliceName?: string;
   filters: object;
   handleToggleFullSize: () => void;
+  onTitleClick: ({ e, title }: { e: any; title: string }) => void;
   formData: object;
   width: number;
   height: number;
+  description?: string;
 };
 
 const annotationsLoading = t('Annotation layers are still loading.');
@@ -156,6 +158,8 @@ const SliceHeader: FC<SliceHeaderProps> = ({
   formData,
   width,
   height,
+  description,
+  onTitleClick,
 }) => {
   const SliceHeaderExtension = extensionsRegistry.get('dashboard.slice.header');
   const uiConfig = useUiConfig();
@@ -191,9 +195,14 @@ const SliceHeader: FC<SliceHeaderProps> = ({
 
   return (
     <ChartHeaderStyles data-test="slice-header" ref={innerRef}>
-      <div className="header-title" ref={headerRef}>
+      <div
+        className="header-title"
+        ref={headerRef}
+        style={{ cursor: description ? 'pointer' : 'default' }}
+      >
         <Tooltip title={headerTooltip}>
           <EditableTitle
+            onClick={onTitleClick}
             title={
               sliceName ||
               (editMode
