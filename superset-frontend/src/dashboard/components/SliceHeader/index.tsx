@@ -46,7 +46,7 @@ type SliceHeaderProps = SliceHeaderControlsProps & {
   formData: object;
   width: number;
   height: number;
-  description?: string;
+  description?: boolean;
 };
 
 const annotationsLoading = t('Annotation layers are still loading.');

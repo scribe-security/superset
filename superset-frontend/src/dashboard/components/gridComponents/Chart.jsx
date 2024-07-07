@@ -420,15 +420,11 @@ class Chart extends Component {
     }
     const msg = {
       title,
-      name: e.name,
-      data: e.data,
-      dataType: e.dataType,
-      // dashboardId: this.props.dashboardId,
-      // componentId: this.props.componentId,
-      // chartId: this.props.chart.id,
       chartDescription: slice.description || '',
       chartName: slice.slice_name,
       chartTitle: title,
+      clickX: e?.nativeEvent?.clientX,
+      clickY: e?.nativeEvent?.clientY,
     };
     SingletonSwitchboard.emit('ChartTitleClicked', msg);
   }
@@ -527,7 +523,7 @@ class Chart extends Component {
           formData={formData}
           width={width}
           height={this.getHeaderHeight()}
-          description={slice?.description}
+          description={slice?.description?.length > 10}
           onTitleClick={params => this.handleTitleClick({ ...params, slice })}
         />
 
