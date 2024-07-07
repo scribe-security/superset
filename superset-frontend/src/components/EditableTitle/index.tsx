@@ -79,7 +79,8 @@ export default function EditableTitle({
       setLastTitle(currentTitle);
       setCurrentTitle(title);
     }
-  }, [currentTitle, title]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title]);
 
   useEffect(() => {
     if (isEditing) {
