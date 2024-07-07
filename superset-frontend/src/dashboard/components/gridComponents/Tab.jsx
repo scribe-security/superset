@@ -275,7 +275,7 @@ class Tab extends React.PureComponent {
         dataType: params.e.dataType,
         tabTitle: params.title,
       };
-      SingletonSwitchboard.emit('tabClicked', msg);
+      SingletonSwitchboard.emit('TabClicked', msg);
     };
 
     return (
