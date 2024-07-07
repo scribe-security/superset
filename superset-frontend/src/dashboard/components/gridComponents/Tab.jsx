@@ -33,6 +33,7 @@ import DragDroppable, {
 import DashboardComponent from 'src/dashboard/containers/DashboardComponent';
 import { TAB_TYPE } from 'src/dashboard/util/componentTypes';
 import { componentShape } from 'src/dashboard/util/propShapes';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 
 export const RENDER_TAB = 'RENDER_TAB';
 export const RENDER_TAB_CONTENT = 'RENDER_TAB_CONTENT';
@@ -271,6 +272,15 @@ class Tab extends PureComponent {
       isHighlighted,
       embeddedMode,
     } = this.props;
+    const onTitleClick = params => {
+      const msg = {
+        name: params.e.name,
+        data: params.e.data,
+        dataType: params.e.dataType,
+        tabTitle: params.title,
+      };
+      SingletonSwitchboard.emit('tabClicked', msg);
+    };
 
     return (
       <DragDroppable
@@ -298,6 +308,7 @@ class Tab extends PureComponent {
               onSaveTitle={this.handleChangeText}
               showTooltip={false}
               editing={editMode && isFocused}
+              onClick={onTitleClick}
             />
             {!editMode && !embeddedMode && (
               <AnchorLink
