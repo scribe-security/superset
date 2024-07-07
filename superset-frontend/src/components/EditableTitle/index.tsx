@@ -99,10 +99,6 @@ export default function EditableTitle({
       e: event,
       title: currentTitle,
     });
-    // const msg = {
-    //   currentTitle,
-    // };
-    // SingletonSwitchboard.emit('ChartTitleClicked', msg);
   };
   function handleClick() {
     if (!canEdit || isEditing) {
@@ -247,8 +243,8 @@ export default function EditableTitle({
         {value}
       </Link>
     ) : (
-      // eslint-disable-next-line jsx-a11y/interactive-supports-focus
-      <div role="button" onClick={onClick} data-test="editable-title-input">
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+      <div onClick={onClick} data-test="editable-title-input">
         {value}
       </div>
     );
