@@ -31,7 +31,13 @@ type EmbeddedSupersetApi = {
   getScrollSize: () => Size;
   getDashboardPermalink: ({ anchor }: { anchor: string }) => Promise<string>;
   getActiveTabs: () => string[];
-  setActiveTabByName: (tabName: string) => void;
+  setActiveTabByName: ({
+    tabName,
+    chartTitleToScroll,
+  }: {
+    tabName: string;
+    chartTitleToScroll?: string;
+  }) => void;
   getDashboardState: () => Record<string, unknown>;
 };
 
@@ -61,7 +67,44 @@ const getDashboardPermalink = async ({
   });
 };
 
-const setActiveTabByName = (tabName: string) => {
+const scrollToChartTitle = (text: string) => {
+  const searchElement = () => {
+    const elements = document.querySelectorAll(
+      '[data-test="editable-title-input"]',
+    );
+    let isElementFound = false;
+
+    elements.forEach(element => {
+      const elementText = element.textContent?.trim();
+      if (isElementFound) return;
+      if (elementText === text.trim()) {
+        isElementFound = true;
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.removeEventListener('load', searchElement);
+      }
+    });
+
+    if (!isElementFound) {
+      console.error(`Element with text "${text}" does not exist`);
+    }
+  };
+
+  if (document.readyState === 'complete') {
+    // If the document is already loaded, execute immediately
+    searchElement();
+  } else {
+    // Otherwise, wait for the window to load
+    window.addEventListener('load', searchElement);
+  }
+};
+
+const setActiveTabByName = ({
+  tabName,
+  chartTitleToScroll,
+}: {
+  tabName: string;
+  chartTitleToScroll?: string;
+}) => {
   const tabs = document.querySelectorAll('.ant-tabs-tab');
   let isTabExist = false;
   tabs.forEach(tab => {
@@ -70,6 +113,9 @@ const setActiveTabByName = (tabName: string) => {
     if (tabNameLowerCase === tabName.toLowerCase().trim()) {
       isTabExist = true;
       (tab as HTMLElement).click();
+    }
+    if (chartTitleToScroll) {
+      scrollToChartTitle(chartTitleToScroll);
     }
   });
   if (!isTabExist) {

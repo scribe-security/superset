@@ -17,6 +17,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+const TerserPlugin = require('terser-webpack-plugin');
 const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
@@ -276,7 +277,22 @@ const config = {
       },
     },
     usedExports: 'global',
-    minimizer: [new CssMinimizerPlugin(), '...'],
+    runtimeChunk: 'single',
+    minimizer: [
+      new CssMinimizerPlugin(),
+      new TerserPlugin({
+        extractComments: false,
+        terserOptions: {
+          compress: {
+            drop_console: true,
+          },
+          output: {
+            comments: false,
+          },
+        },
+      }),
+      '...',
+    ],
   },
   resolve: {
     // resolve modules from `/superset_frontend/node_modules` and `/superset_frontend`
