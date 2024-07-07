@@ -102,24 +102,26 @@ const setActiveTabByName = ({
   tabName,
   chartTitleToScroll,
 }: {
-  tabName: string;
+  tabName?: string;
   chartTitleToScroll?: string;
 }) => {
   const tabs = document.querySelectorAll('.ant-tabs-tab');
   let isTabExist = false;
-  tabs.forEach(tab => {
-    const tabNameLowerCase = tab.textContent?.toLowerCase().trim();
-    if (isTabExist) return;
-    if (tabNameLowerCase === tabName.toLowerCase().trim()) {
-      isTabExist = true;
-      (tab as HTMLElement).click();
+  if (tabName) {
+    tabs.forEach(tab => {
+      const tabNameLowerCase = tab.textContent?.toLowerCase().trim();
+      if (isTabExist) return;
+      if (tabNameLowerCase === tabName.toLowerCase().trim()) {
+        isTabExist = true;
+        (tab as HTMLElement).click();
+      }
+    });
+    if (!isTabExist) {
+      console.error(`Tab with name ${tabName} does not exist`);
     }
-    if (chartTitleToScroll) {
-      scrollToChartTitle(chartTitleToScroll);
-    }
-  });
-  if (!isTabExist) {
-    console.error(`Tab with name ${tabName} does not exist`);
+  }
+  if (chartTitleToScroll) {
+    scrollToChartTitle(chartTitleToScroll);
   }
 };
 
