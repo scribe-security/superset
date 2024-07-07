@@ -411,7 +411,7 @@ class Chart extends Component {
       chartName: this.props.slice.slice_name,
       chartTitle: this.props.sliceName,
     };
-    SingletonSwitchboard.emit('DashboardBarClicked', msg);
+    SingletonSwitchboard.emit('ChartBarClicked', msg);
   };
 
   handleTitleClick({ e, title, slice }) {
