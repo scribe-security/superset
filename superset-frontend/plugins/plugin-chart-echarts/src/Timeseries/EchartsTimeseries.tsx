@@ -56,6 +56,7 @@ export default function EchartsTimeseries({
   xAxis,
   refs,
   emitCrossFilters,
+  onClickListener,
   coltypeMapping,
 }: TimeseriesChartTransformedProps) {
   const { stack } = formData;
@@ -130,13 +131,16 @@ export default function EchartsTimeseries({
   );
 
   const handleChange = useCallback(
-    (value: string) => {
+    (value: string, props?: any) => {
+      if (props && onClickListener) {
+        onClickListener(props);
+      }
       if (!emitCrossFilters) {
         return;
       }
       setDataMask(getCrossFilterDataMask(value).dataMask);
     },
-    [emitCrossFilters, setDataMask, getCrossFilterDataMask],
+    [onClickListener, emitCrossFilters, setDataMask, getCrossFilterDataMask],
   );
 
   const eventHandlers: EventHandlers = {
@@ -150,7 +154,7 @@ export default function EchartsTimeseries({
       // Ensure that double-click events do not trigger single click event. So we put it in the timer.
       clickTimer.current = setTimeout(() => {
         const { seriesName: name } = props;
-        handleChange(name);
+        handleChange(name, props);
       }, TIMER_DURATION);
     },
     mouseout: () => {
