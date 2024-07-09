@@ -125,6 +125,7 @@ const setActiveTabByName = ({
   }
 };
 
+
 const getActiveTabs = () => store?.getState()?.dashboardState?.activeTabs || [];
 
 const getDashboardState = () => store?.getState()?.dashboardState || [];
