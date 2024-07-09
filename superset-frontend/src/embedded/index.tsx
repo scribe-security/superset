@@ -213,6 +213,10 @@ window.addEventListener('message', function embeddedPageInitializer(event) {
       'setActiveTabByName',
       embeddedApi.setActiveTabByName,
     );
+    Switchboard.defineMethod(
+      'setWindowLoadedHandler',
+      embeddedApi.setWindowLoadedHandler,
+    );
     Switchboard.start();
   }
 });
