@@ -21,6 +21,7 @@ import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { addAlpha, css, styled, t } from '@superset-ui/core';
 import { EmptyStateBig } from 'src/components/EmptyState';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { componentShape } from '../util/propShapes';
 import DashboardComponent from '../containers/DashboardComponent';
 import DragDroppable from './dnd/DragDroppable';
@@ -170,6 +171,19 @@ class DashboardGrid extends React.PureComponent {
 
   handleChangeTab({ pathToTabIndex }) {
     this.props.setDirectPathToChild(pathToTabIndex);
+  }
+
+  componentDidMount() {
+    const size = {
+      width: document.body.scrollWidth,
+      height: document.querySelector('.dashboard-grid')?.offsetHeight || 0,
+    };
+    const msg = {
+      laded: true,
+      documentReadyState: document.readyState,
+      size,
+    };
+    SingletonSwitchboard.emit('windowLoaded', msg);
   }
 
   render() {
