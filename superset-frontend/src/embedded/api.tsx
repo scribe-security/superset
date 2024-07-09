@@ -19,8 +19,6 @@
 import getBootstrapData from 'src/utils/getBootstrapData';
 import { store } from '../views/store';
 import { getDashboardPermalink as getDashboardPermalinkUtil } from '../utils/urlUtils';
-import SingletonSwitchboard from '@superset-ui/switchboard';
-
 
 const bootstrapData = getBootstrapData();
 
@@ -41,7 +39,6 @@ type EmbeddedSupersetApi = {
     chartTitleToScroll?: string;
   }) => void;
   getDashboardState: () => Record<string, unknown>;
-  setWindowLoadedHandler: () => void;
 };
 
 const getScrollSize = (): Size => ({
@@ -128,20 +125,6 @@ const setActiveTabByName = ({
   }
 };
 
-const onWindowLoaded = () => {
-  if (document.readyState === 'complete') {
-    const msg = {
-      laded: true,
-      documentReadyState: document.readyState,
-    };
-    SingletonSwitchboard.emit('windowLoaded', msg);
-    window.removeEventListener('load', onWindowLoaded);
-  } else {
-    window.addEventListener('load', () => onWindowLoaded());
-  }
-};
-
-const setWindowLoadedHandler = () => onWindowLoaded();
 
 const getActiveTabs = () => store?.getState()?.dashboardState?.activeTabs || [];
 
@@ -153,5 +136,4 @@ export const embeddedApi: EmbeddedSupersetApi = {
   getActiveTabs,
   getDashboardState,
   setActiveTabByName,
-  setWindowLoadedHandler,
 };
