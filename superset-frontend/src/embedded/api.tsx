@@ -69,13 +69,11 @@ const getDashboardPermalink = async ({
 
 const scrollToChartTitle = (text: string) => {
   const searchElement = () => {
-    const elements = document.querySelectorAll(
-      '[data-test="editable-title-input"]',
-    );
+    const elements = document.querySelectorAll('span.editable-title');
     let isElementFound = false;
 
     elements.forEach(element => {
-      const childElement = element.querySelector('.editable-title div');
+      const childElement = element.querySelector('div');
       const elementText = childElement?.textContent?.trim();
       if (isElementFound) return;
       if (elementText === text.trim()) {
