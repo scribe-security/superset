@@ -75,7 +75,8 @@ const scrollToChartTitle = (text: string) => {
     let isElementFound = false;
 
     elements.forEach(element => {
-      const elementText = element.textContent?.trim();
+      const childElement = element.querySelector('.editable-title div');
+      const elementText = childElement?.textContent?.trim();
       if (isElementFound) return;
       if (elementText === text.trim()) {
         isElementFound = true;
