@@ -64,6 +64,7 @@ const propTypes = {
   source: PropTypes.oneOf([ChartSource.Dashboard, ChartSource.Explore]),
   emitCrossFilters: PropTypes.bool,
   onClickListener: PropTypes.func,
+  description: PropTypes.bool,
 };
 
 const BLANK = {};
@@ -160,7 +161,8 @@ class ChartRenderer extends React.Component {
         nextProps.formData.stack !== this.props.formData.stack ||
         nextProps.cacheBusterProp !== this.props.cacheBusterProp ||
         nextProps.emitCrossFilters !== this.props.emitCrossFilters ||
-        nextProps.onClickListener !== this.props.onClickListener
+        nextProps.onClickListener !== this.props.onClickListener ||
+        nextProps.description !== this.props.description
       );
     }
     return false;
@@ -251,6 +253,8 @@ class ChartRenderer extends React.Component {
       chartId,
       emitCrossFilters,
       onClickListener,
+      availableActions,
+      descriptionKeys,
     } = this.props;
 
     // Skip chart rendering
@@ -371,6 +375,8 @@ class ChartRenderer extends React.Component {
             emitCrossFilters={emitCrossFilters}
             legendState={this.state.legendState}
             onClickListener={onClickListener}
+            availableActions={availableActions}
+            descriptionKeys={descriptionKeys}
             {...drillToDetailProps}
           />
         </div>

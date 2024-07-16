@@ -49,11 +49,20 @@ type SliceHeaderProps = SliceHeaderControlsProps & {
   sliceName?: string;
   filters: object;
   handleToggleFullSize: () => void;
-  onTitleClick: ({ e, title }: { e: any; title: string }) => void;
+  onTitleClick: ({
+    event,
+    title,
+    emitter,
+  }: {
+    event: any;
+    title: string;
+    emitter: string;
+  }) => void;
   formData: object;
   width: number;
   height: number;
-  description?: boolean;
+  availableActions?: string[];
+  descriptionKeys?: Record<string, string>;
 };
 
 const annotationsLoading = t('Annotation layers are still loading.');
@@ -164,8 +173,9 @@ const SliceHeader: FC<SliceHeaderProps> = ({
   formData,
   width,
   height,
-  description,
+  availableActions,
   onTitleClick,
+  descriptionKeys,
 }) => {
   const SliceHeaderExtension = extensionsRegistry.get('dashboard.slice.header');
   const uiConfig = useUiConfig();
@@ -197,18 +207,23 @@ const SliceHeader: FC<SliceHeaderProps> = ({
     }
   }, [sliceName, width, height, canExplore]);
 
+  const canEmit = availableActions?.includes(
+    descriptionKeys?.CHART_TITLE_CLICK || '',
+  );
   const exploreUrl = `/explore/?dashboard_page_id=${dashboardPageId}&slice_id=${slice.slice_id}`;
 
   return (
     <ChartHeaderStyles data-test="slice-header" ref={innerRef}>
-      <div
-        className="header-title"
-        ref={headerRef}
-        style={{ cursor: description ? 'pointer' : 'default' }}
-      >
+      <div className="header-title" ref={headerRef}>
         <Tooltip title={headerTooltip}>
           <EditableTitle
-            onClick={onTitleClick}
+            onClick={event =>
+              onTitleClick({
+                event,
+                title: sliceName,
+                emitter: descriptionKeys?.CHART_TITLE_CLICK ?? '',
+              })
+            }
             title={
               sliceName ||
               (editMode
@@ -218,6 +233,7 @@ const SliceHeader: FC<SliceHeaderProps> = ({
             canEdit={editMode}
             onSaveTitle={updateSliceName}
             showTooltip={false}
+            canEmit={canEmit}
             url={canExplore ? exploreUrl : undefined}
           />
         </Tooltip>

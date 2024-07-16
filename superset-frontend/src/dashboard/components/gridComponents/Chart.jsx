@@ -126,6 +126,13 @@ const SliceContainer = styled.div`
   max-height: 100%;
 `;
 
+const descriptionKeys = {
+  CHART_TITLE_CLICK: 'CHART_TITLE_CLICK',
+  CHART_WRAPPER_CLICK: 'CHART_WRAPPER_CLICK',
+  CHART_NUMBERS_CLICK: 'CHART_NUMBERS_CLICK',
+  CHART_BAR_CLICK: 'CHART_BAR_CLICK',
+};
+
 class Chart extends React.Component {
   constructor(props) {
     super(props);
@@ -378,48 +385,53 @@ class Chart extends React.Component {
     );
   }
 
-  handleClick(event) {
-    const msg = {
-      dashboardId: this.props.dashboardId,
-      componentId: this.props.componentId,
-      chartId: this.props.chart.id,
-      chartDescription: this.props.slice.description || '',
-      chartName: this.props.slice.slice_name,
-      chartTitle: this.props.sliceName,
-      clickX: event.nativeEvent.clientX,
-      clickY: event.nativeEvent.clientY,
-    };
-    SingletonSwitchboard.emit('DashboardChartClicked', msg);
+  parseDescription(description) {
+    const pattern = /<!--\s*([\s\S]*?)\s*-->/g;
+    const chartDescription = pattern.exec(description);
+
+    if (!chartDescription) return {};
+
+    let parsedDescription = {};
+
+    try {
+      parsedDescription = JSON.parse(chartDescription[1]);
+    } catch (error) {
+      console.error(
+        `Error parsing description for ${this.props.sliceName}`,
+        error,
+      );
+    }
+    return parsedDescription;
   }
 
-  handleClickBar = event => {
-    const msg = {
-      name: event.name,
-      data: event.data,
-      dataType: event.dataType,
-      dashboardId: this.props.dashboardId,
-      componentId: this.props.componentId,
-      chartId: this.props.chart.id,
-      chartDescription: this.props.slice.description || '',
-      chartName: this.props.slice.slice_name,
-      chartTitle: this.props.sliceName,
-    };
-    SingletonSwitchboard.emit('ChartBarClicked', msg);
-  };
+  hasDescriptionKey(key) {
+    return Object.keys(
+      this.parseDescription(this.props?.slice?.description || ''),
+    ).includes(key);
+  }
 
-  handleTitleClick({ e, title, slice }) {
-    if (!slice?.description) {
-      return;
+  handleWrapperClick(event) {
+    if (
+      Object.keys(
+        this.parseDescription(this.props?.slice?.description || '') || {},
+      ).includes(descriptionKeys.CHART_WRAPPER_CLICK)
+    ) {
+      this.handleClick({
+        event,
+        emitter: descriptionKeys.CHART_WRAPPER_CLICK,
+      });
     }
+  }
+
+  handleClick({ event, ...rest }) {
     const msg = {
-      title,
-      chartDescription: slice.description || '',
-      chartName: slice.slice_name,
-      chartTitle: title,
-      clickX: e?.nativeEvent?.clientX,
-      clickY: e?.nativeEvent?.clientY,
+      chartProps: JSON.parse(JSON.stringify(this.props)),
+      chartDescription: this.parseDescription(
+        this.props?.slice?.description || '',
+      ),
+      params: JSON.parse(JSON.stringify(rest)),
     };
-    SingletonSwitchboard.emit('ChartTitleClicked', msg);
+    SingletonSwitchboard.emit('DashboardChartClicked', msg);
   }
 
   render() {
@@ -521,8 +533,11 @@ class Chart extends React.Component {
           formData={formData}
           width={width}
           height={this.getHeaderHeight()}
-          description={slice?.description?.length > 10}
-          onTitleClick={params => this.handleTitleClick({ ...params, slice })}
+          availableActions={Object.keys(
+            this.parseDescription(slice?.description || '') || {},
+          )}
+          descriptionKeys={descriptionKeys}
+          onTitleClick={this.handleClick}
         />
 
         {/*
@@ -546,7 +561,14 @@ class Chart extends React.Component {
             'dashboard-chart',
             isOverflowable && 'dashboard-chart--overflowable',
           )}
-          onClick={this.handleClick}
+          onClick={event => {
+            this.handleWrapperClick(event);
+          }}
+          style={{
+            cursor: this.hasDescriptionKey(descriptionKeys.CHART_WRAPPER_CLICK)
+              ? 'pointer'
+              : 'default',
+          }}
         >
           {isLoading && (
             <ChartOverlay
@@ -584,7 +606,11 @@ class Chart extends React.Component {
             datasetsStatus={datasetsStatus}
             isInView={isInView}
             emitCrossFilters={emitCrossFilters}
-            onClickListener={this.handleClickBar}
+            onClickListener={this.handleClick}
+            availableActions={
+              Object.keys(this.parseDescription(slice?.description || '')) || {}
+            }
+            descriptionKeys={descriptionKeys}
           />
         </ChartWrapper>
       </SliceContainer>

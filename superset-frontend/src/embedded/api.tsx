@@ -66,6 +66,25 @@ const getDashboardPermalink = async ({
     anchor,
   });
 };
+const scrollToElementWithOffset = (element: HTMLElement, offset = 30) => {
+  if (!element) {
+    console.error('Element is undefined');
+    return;
+  }
+
+  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const scrollOffset = () => {
+    const rect = element.getBoundingClientRect();
+    if (rect.top === 0) {
+      window.scrollBy({ top: offset, left: 0, behavior: 'smooth' });
+    } else {
+      requestAnimationFrame(scrollOffset);
+    }
+  };
+
+  requestAnimationFrame(scrollOffset);
+};
 
 const scrollToChartTitle = (text: string) => {
   const searchElement = () => {
@@ -78,8 +97,7 @@ const scrollToChartTitle = (text: string) => {
       if (isElementFound) return;
       if (elementText === text.trim()) {
         isElementFound = true;
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.removeEventListener('load', searchElement);
+        scrollToElementWithOffset(element as HTMLElement, -30);
       }
     });
 
@@ -88,14 +106,17 @@ const scrollToChartTitle = (text: string) => {
     }
   };
 
-  if (document.readyState === 'complete') {
-    // If the document is already loaded, execute immediately
-    searchElement();
-  } else {
-    // Otherwise, wait for the window to load
-    window.addEventListener('load', searchElement);
-  }
+  searchElement();
 };
+
+// if (document.readyState === 'complete') {
+//   // If the document is already loaded, execute immediately
+//   searchElement();
+// } else {
+//   // Otherwise, wait for the window to load
+//   window.addEventListener('load', searchElement);
+// }
+// };
 
 const setActiveTabByName = ({
   tabName,

@@ -169,12 +169,16 @@ class SuperChart extends React.PureComponent<Props, {}> {
       noResults,
       theme,
       onClickListener,
+      availableActions,
+      descriptionKeys,
       ...rest
     } = this.props as PropsWithDefault;
 
     const chartProps = this.createChartProps({
       ...rest,
       onClickListener,
+      availableActions,
+      descriptionKeys,
       queriesData,
       height,
       width,

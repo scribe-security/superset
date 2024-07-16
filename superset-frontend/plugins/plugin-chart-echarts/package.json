@@ -27,6 +27,7 @@
     "access": "public"
   },
   "dependencies": {
+    "classnames": "^2.5.1",
     "d3-array": "^1.2.0",
     "echarts": "^5.4.1",
     "lodash": "^4.17.15",
