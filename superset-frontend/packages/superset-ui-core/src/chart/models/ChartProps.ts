@@ -107,6 +107,8 @@ export interface ChartPropsConfig {
   theme: SupersetTheme;
 
   onClickListener?: (e: unknown) => void;
+  availableActions?: string[];
+  descriptionKeys?: Record<string, string>;
 }
 
 const DEFAULT_WIDTH = 800;
@@ -157,6 +159,10 @@ export default class ChartProps<FormData extends RawFormData = RawFormData> {
 
   onClickListener?: (e: unknown) => void;
 
+  availableActions: string[];
+
+  descriptionKeys?: Record<string, string>;
+
   theme: SupersetTheme;
 
   constructor(config: ChartPropsConfig & { formData?: FormData } = {}) {
@@ -181,6 +187,8 @@ export default class ChartProps<FormData extends RawFormData = RawFormData> {
       emitCrossFilters = false,
       theme,
       onClickListener,
+      availableActions,
+      descriptionKeys,
     } = config;
     this.width = width;
     this.height = height;
@@ -204,6 +212,8 @@ export default class ChartProps<FormData extends RawFormData = RawFormData> {
     this.emitCrossFilters = emitCrossFilters;
     this.theme = theme;
     this.onClickListener = onClickListener;
+    this.availableActions = availableActions;
+    this.descriptionKeys = descriptionKeys;
   }
 }
 
@@ -230,6 +240,8 @@ ChartProps.createSelector = function create(): ChartPropsSelector {
     input => input.emitCrossFilters,
     input => input.theme,
     input => input.onClickListener,
+    input => input.availableActions,
+    input => input.descriptionKeys,
     (
       annotationData,
       datasource,
@@ -251,6 +263,8 @@ ChartProps.createSelector = function create(): ChartPropsSelector {
       emitCrossFilters,
       theme,
       onClickListener,
+      availableActions,
+      descriptionKeys,
     ) =>
       new ChartProps({
         annotationData,
@@ -273,6 +287,8 @@ ChartProps.createSelector = function create(): ChartPropsSelector {
         emitCrossFilters,
         theme,
         onClickListener,
+        availableActions,
+        descriptionKeys,
       }),
   );
 };

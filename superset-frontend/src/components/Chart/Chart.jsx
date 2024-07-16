@@ -83,6 +83,8 @@ const propTypes = {
   isInView: PropTypes.bool,
   emitCrossFilters: PropTypes.bool,
   onClickListener: PropTypes.func,
+  availableActions: PropTypes.array,
+  descriptionKeys: PropTypes.object,
 };
 
 const BLANK = {};

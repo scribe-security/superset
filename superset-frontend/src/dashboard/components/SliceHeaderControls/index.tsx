@@ -167,6 +167,8 @@ export interface SliceHeaderControlsProps {
 
   crossFiltersEnabled?: boolean;
   onClickListener?: (e: Event) => void;
+  availableActions?: string[];
+  descriptionKeys?: Record<string, string>;
 }
 type SliceHeaderControlsPropsWithRouter = SliceHeaderControlsProps &
   RouteComponentProps;

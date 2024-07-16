@@ -99,6 +99,16 @@ function generateProps(
     filterState: {},
     behaviors: [],
     theme: supersetTheme,
+    appSection: undefined,
+    availableActions: [],
+    descriptionKeys: undefined,
+    displaySettings: undefined,
+    emitCrossFilters: false,
+    inContextMenu: false,
+    inputRef: undefined,
+    isRefreshing: false,
+    legendState: undefined,
+    onClickListener(e: unknown): void {},
   };
 }
 

@@ -139,6 +139,8 @@ export interface BaseTransformedProps<F> {
   emitCrossFilters?: boolean;
   coltypeMapping?: Record<string, number>;
   onClickListener?: (data: unknown) => void;
+  availableActions?: string[];
+  descriptionKeys?: Record<string, string>;
 }
 
 export type CrossFilterTransformedProps = {

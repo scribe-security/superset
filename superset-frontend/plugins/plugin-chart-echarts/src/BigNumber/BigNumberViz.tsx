@@ -17,6 +17,7 @@
  * under the License.
  */
 import { PureComponent, MouseEvent } from 'react';
+import cx from 'classnames';
 import {
   t,
   getNumberFormatter,
@@ -56,6 +57,9 @@ class BigNumberVis extends PureComponent<BigNumberVizProps> {
     subheader: '',
     subheaderFontSize: PROPORTION.SUBHEADER,
     timeRangeFixed: false,
+    onClickListener: () => {},
+    availableActions: [],
+    descriptionKeys: {},
   };
 
   getClassName() {
@@ -281,6 +285,10 @@ class BigNumberVis extends PureComponent<BigNumberVizProps> {
       kickerFontSize,
       headerFontSize,
       subheaderFontSize,
+      bigNumber,
+      onClickListener,
+      availableActions,
+      descriptionKeys,
     } = this.props;
     const className = this.getClassName();
 
@@ -288,9 +296,33 @@ class BigNumberVis extends PureComponent<BigNumberVizProps> {
       const chartHeight = Math.floor(PROPORTION.TRENDLINE * height);
       const allTextHeight = height - chartHeight;
 
+      const canEmitChartNumbersClick = availableActions?.includes(
+        descriptionKeys?.CHART_NUMBERS_CLICK || '',
+      );
+      const canEmitChartWrapperClick = availableActions?.includes(
+        descriptionKeys?.CHART_WRAPPER_CLICK || '',
+      );
+
+      const canEmit = canEmitChartWrapperClick || canEmitChartNumbersClick;
+      const textStyle = {
+        height: allTextHeight,
+      };
+
       return (
         <div className={className}>
-          <div className="text-container" style={{ height: allTextHeight }}>
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+          <div
+            role={canEmit ? 'button' : undefined}
+            onClick={() =>
+              canEmit &&
+              onClickListener?.({
+                bigNumber,
+                emmiter: descriptionKeys?.CHART_NUMBERS_CLICK,
+              })
+            }
+            className={cx('text-container', { canEmit })}
+            style={textStyle}
+          >
             {this.renderFallbackWarning()}
             {this.renderKicker(
               Math.ceil(
@@ -353,12 +385,23 @@ export default styled(BigNumberVis)`
       line-height: 1em;
       padding-bottom: 2em;
     }
+   
+   .canEmit {
+      .header-line:hover{
+        cursor: pointer;
+        color:  ${theme.colors.primary.base}!important;
+        -webkit-transition: ease-in-out 0.1s;
+        transition: ease-in-out 0.1s;        
+      } 
+   }
 
     .header-line {
       position: relative;
+      cursor: auto;
       line-height: 1em;
       white-space: nowrap;
       margin-bottom:${theme.gridUnit * 2}px;
+      transition: color 500ms linear;
       span {
         position: absolute;
         bottom: 0;

@@ -92,6 +92,7 @@ export const Timeseries = (
       chartType="echarts-timeseries"
       width={width}
       height={height}
+      availableActions={availableActions}
       onClickListener={onClickListener}
       queriesData={[
         { data: queryData, colnames: ['__timestamp'], coltypes: [2] },

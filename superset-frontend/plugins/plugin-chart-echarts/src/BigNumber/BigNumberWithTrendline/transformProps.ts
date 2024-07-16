@@ -55,6 +55,9 @@ export default function transformProps(
     theme,
     hooks,
     inContextMenu,
+    descriptionKeys,
+    availableActions,
+    onClickListener,
     datasource: { currencyFormats = {}, columnFormats = {} },
   } = chartProps;
   const {
@@ -275,6 +278,9 @@ export default function transformProps(
     echartOptions,
     onContextMenu,
     xValueFormatter: formatTime,
+    availableActions,
+    descriptionKeys,
+    onClickListener,
     refs,
   };
 }

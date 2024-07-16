@@ -309,6 +309,7 @@ class Tab extends PureComponent {
               showTooltip={false}
               editing={editMode && isFocused}
               onClick={onTitleClick}
+              canEmit
             />
             {!editMode && !embeddedMode && (
               <AnchorLink
