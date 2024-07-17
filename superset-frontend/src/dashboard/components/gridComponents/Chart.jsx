@@ -437,7 +437,7 @@ class Chart extends React.Component {
         this.props?.slice?.description || '',
       ),
       params: JSON.parse(JSON.stringify(rest)),
-      barName: event.name,
+      barName: event?.name,
     };
     SingletonSwitchboard.emit('DashboardChartClicked', msg);
   }
