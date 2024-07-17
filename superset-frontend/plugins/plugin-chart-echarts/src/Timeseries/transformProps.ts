@@ -116,6 +116,8 @@ export default function transformProps(
     inContextMenu,
     emitCrossFilters,
     onClickListener,
+    availableActions,
+    descriptionKeys,
   } = chartProps;
 
   let focusedSeries: string | null = null;
@@ -620,5 +622,7 @@ export default function transformProps(
     refs,
     coltypeMapping: dataTypes,
     onClickListener,
+    availableActions,
+    descriptionKeys,
   };
 }

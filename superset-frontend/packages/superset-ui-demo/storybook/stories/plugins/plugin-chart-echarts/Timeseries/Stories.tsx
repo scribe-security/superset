@@ -44,7 +44,12 @@ export default {
   decorators: [withKnobs, withResizableChartDemo],
 };
 
-export const Timeseries = ({ width, height, onClickListener }) => {
+export const Timeseries = ({
+  width,
+  height,
+  onClickListener,
+  availableActions,
+}) => {
   const forecastEnabled = boolean('Enable forecast', true);
   const queryData = data
     .map(row =>
@@ -64,6 +69,7 @@ export const Timeseries = ({ width, height, onClickListener }) => {
       chartType="echarts-timeseries"
       width={width}
       height={height}
+      availableActions={availableActions}
       onClickListener={onClickListener}
       queriesData={[
         { data: queryData, colnames: ['__timestamp'], coltypes: [2] },

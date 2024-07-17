@@ -40,6 +40,7 @@ export interface EditableTitleProps {
   certificationDetails?: string;
   url?: string;
   onClick?: ({ e, title }: { e: any; title: string }) => void;
+  canEmit?: boolean;
 }
 
 const StyledCertifiedBadge = styled(CertifiedBadge)`
@@ -58,13 +59,14 @@ export default function EditableTitle({
   title = '',
   defaultTitle = '',
   placeholder = '',
+  canEmit = false,
   certifiedBy,
   certificationDetails,
   url,
   onClick: onClickLocal,
   // rest is related to title tooltip
   ...rest
-}: EditableTitleProps) {
+}: Readonly<EditableTitleProps>) {
   const [isEditing, setIsEditing] = useState(editing);
   const [currentTitle, setCurrentTitle] = useState(title);
   const [lastTitle, setLastTitle] = useState(title);
@@ -73,6 +75,15 @@ export default function EditableTitle({
   // Used so we can access the DOM element if a user clicks on this component.
 
   const contentRef = useRef<any | HTMLInputElement | HTMLTextAreaElement>();
+
+  const [hover, setHover] = useState(false);
+
+  const textStyle = {
+    cursor: canEmit ? 'pointer' : 'default',
+    transition: 'color  500ms linear',
+    color:
+      hover && canEmit ? 'rgba(68, 188, 211, 0.996)' : 'rgba(0, 0, 0, 0.8)',
+  };
 
   useEffect(() => {
     if (title !== currentTitle) {
@@ -96,6 +107,7 @@ export default function EditableTitle({
   }, [isEditing]);
 
   const onClick = (event: React.MouseEvent) => {
+    if (!canEmit) return;
     onClickLocal?.({
       e: event,
       title: currentTitle,
@@ -245,8 +257,17 @@ export default function EditableTitle({
       </Link>
     ) : (
       // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-      <div onClick={onClick} data-test="editable-title-input">
-        {value}
+      <div data-test="editable-title-input">
+        <span
+          onClick={onClick}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          style={textStyle}
+          role="button"
+          tabIndex={0}
+        >
+          {value}
+        </span>
       </div>
     );
   }

@@ -304,6 +304,7 @@ class Tab extends React.PureComponent {
               showTooltip={false}
               editing={editMode && isFocused}
               onClick={onTitleClick}
+              canEmit
             />
             {!editMode && (
               <AnchorLink

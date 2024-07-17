@@ -54,6 +54,9 @@ export default function transformProps(
     yAxisFormat,
     conditionalFormatting,
     currencyFormat,
+    availableActions,
+    descriptionKeys,
+    onClickListener,
   } = formData;
   const refs: Refs = {};
   const { data = [], coltypes = [] } = queriesData[0];
@@ -110,5 +113,8 @@ export default function transformProps(
     onContextMenu,
     refs,
     colorThresholdFormatters,
+    availableActions,
+    descriptionKeys,
+    onClickListener,
   };
 }

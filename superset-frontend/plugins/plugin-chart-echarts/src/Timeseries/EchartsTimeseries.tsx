@@ -56,6 +56,8 @@ export default function EchartsTimeseries({
   refs,
   emitCrossFilters,
   onClickListener,
+  availableActions,
+  descriptionKeys,
   coltypeMapping,
 }: TimeseriesChartTransformedProps) {
   const { stack } = formData;
@@ -129,15 +131,30 @@ export default function EchartsTimeseries({
 
   const handleChange = useCallback(
     (value: string, props?: any) => {
-      if (props && onClickListener) {
-        onClickListener(props);
+      if (
+        props &&
+        onClickListener &&
+        availableActions?.includes(descriptionKeys?.CHART_BAR_CLICK || '')
+      ) {
+        onClickListener({
+          event: props,
+          filters: getCrossFilterDataMask(value).dataMask,
+          emitter: descriptionKeys?.CHART_BAR_CLICK,
+        });
       }
       if (!emitCrossFilters) {
         return;
       }
       setDataMask(getCrossFilterDataMask(value).dataMask);
     },
-    [onClickListener, emitCrossFilters, setDataMask, getCrossFilterDataMask],
+    [
+      onClickListener,
+      availableActions,
+      descriptionKeys?.CHART_BAR_CLICK,
+      emitCrossFilters,
+      setDataMask,
+      getCrossFilterDataMask,
+    ],
   );
 
   const eventHandlers: EventHandlers = {
