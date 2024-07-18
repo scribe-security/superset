@@ -265,6 +265,7 @@ export default function EditableTitle({
           style={textStyle}
           role="button"
           tabIndex={0}
+          data-findable="title"
         >
           {value}
         </span>
