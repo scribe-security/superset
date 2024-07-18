@@ -18,12 +18,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  DTTM_ALIAS,
-  BinaryQueryObjectFilterClause,
   AxisType,
-  getTimeFormatter,
+  BinaryQueryObjectFilterClause,
+  DTTM_ALIAS,
   getColumnLabel,
   getNumberFormatter,
+  getTimeFormatter,
   LegendState,
   ensureIsArray,
 } from '@superset-ui/core';
@@ -68,6 +68,7 @@ export default function EchartsTimeseries({
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
   const extraControlRef = useRef<HTMLDivElement>(null);
   const [extraControlHeight, setExtraControlHeight] = useState(0);
+
   useEffect(() => {
     const updatedHeight = extraControlRef.current?.offsetHeight || 0;
     setExtraControlHeight(updatedHeight);

@@ -72,32 +72,25 @@ const scrollToElementWithOffset = (element: HTMLElement, offset = 30) => {
     return;
   }
 
-  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  const scrollOffset = () => {
-    const rect = element.getBoundingClientRect();
-    if (rect.top === 0) {
-      window.scrollBy({ top: offset, left: 0, behavior: 'smooth' });
-    } else {
-      requestAnimationFrame(scrollOffset);
-    }
-  };
-
-  requestAnimationFrame(scrollOffset);
+  const elementPosition =
+    element.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({
+    top: elementPosition,
+    behavior: 'smooth',
+  });
 };
 
 const scrollToChartTitle = (text: string) => {
   const searchElement = () => {
-    const elements = document.querySelectorAll('span.editable-title');
+    const elements = document.querySelectorAll('span[data-findable="title"]');
     let isElementFound = false;
 
     elements.forEach(element => {
-      const childElement = element.querySelector('div');
-      const elementText = childElement?.textContent?.trim();
+      const elementText = element?.textContent?.trim();
       if (isElementFound) return;
       if (elementText === text.trim()) {
         isElementFound = true;
-        scrollToElementWithOffset(element as HTMLElement, -30);
+        scrollToElementWithOffset(element as HTMLElement, 30);
       }
     });
 
