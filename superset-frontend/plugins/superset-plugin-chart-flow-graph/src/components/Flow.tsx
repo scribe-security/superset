@@ -5,6 +5,8 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import ELK from 'elkjs/lib/elk.bundled.js';
+import { EChartsOption, ECElementEvent, ECharts } from 'echarts';
 import {
   buildCollapseNodes,
   buildTree,
@@ -12,7 +14,6 @@ import {
   NodeTreeType,
 } from '../utils';
 
-import ELK from 'elkjs/lib/elk.bundled.js';
 import EChartsRenderer from './EChartsRenderer';
 import {
   Edge,
@@ -20,7 +21,6 @@ import {
   SupersetData,
   SupersetPluginChartFlowGraphProps,
 } from '../types';
-import { EChartsOption, ECElementEvent, ECharts } from 'echarts';
 
 // ELK layout logic
 const elk = new ELK();
@@ -48,7 +48,7 @@ const useLayoutedElements = () => {
 
       const graph = {
         id: 'root',
-        layoutOptions: layoutOptions,
+        layoutOptions,
         children: nodes.map((c: Node) => ({
           ...c,
           width: nodeSize.width,
@@ -214,7 +214,7 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
         edgeSymbolSize: [props.edgeSizeStart, props.edgeSizeEnd],
         nodeScaleRatio: props.nodeScaleRatio as 0.6,
         draggable: props.draggableNodes,
-        data: nodes, //.map((n: any) => ({ ...n, symbolSize: n.width })),
+        data: nodes, // .map((n: any) => ({ ...n, symbolSize: n.width })),
         links: edges.map((e: any) => {
           const s = nodes.findIndex((n: Node) => n.id === e.source);
           const t = nodes.findIndex((n: Node) => n.id === e.target);
@@ -238,16 +238,15 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
           show: false,
           textStyle: { color: props.ttTextColor },
           backgroundColor: props.ttBackgroundColor,
-          position: function (point, params, dom, rect, size) {
+          position(point, params, dom, rect, size) {
             const coords = chart?.convertToPixel({ seriesId: 'graph' }, [
               (params as any).data.x,
               (params as any).data.y,
             ]);
             if (coords) {
               return [coords[0] + props.ttOffsetX, coords[1] + props.ttOffsetY];
-            } else {
-              return point;
             }
+            return point;
           },
         },
         center: undefined,

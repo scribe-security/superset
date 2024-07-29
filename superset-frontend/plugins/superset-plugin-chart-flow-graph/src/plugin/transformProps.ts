@@ -105,7 +105,7 @@ export default function transformProps(chartProps: ChartProps) {
     .filter(([k, _]) => k.startsWith('edgeColor') && k !== 'edgeColorCol')
     .map(([_, v]) => {
       if (typeof v === 'string') return v;
-      else return RGBAToHexA(v, RGBAToHexA(DEFAULT_EDGE_COLOR));
+      return RGBAToHexA(v, RGBAToHexA(DEFAULT_EDGE_COLOR));
     });
 
   const typeMapping: TypeMapping = {};

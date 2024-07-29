@@ -96,6 +96,7 @@ export type Node = {
   x?: number;
   y?: number;
   value?: string;
+  layoutOptions?: any;
   label?: { formatter: string; rich?: { [styleName: string]: any } };
   tooltip?: { [key: string]: any };
   emphasis?: { [key: string]: any };

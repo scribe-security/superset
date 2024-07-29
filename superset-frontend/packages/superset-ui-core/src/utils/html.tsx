@@ -5,7 +5,7 @@ const xssFilter = new FilterXSS({
   whiteList: {
     ...getDefaultWhiteList(),
     span: ['style', 'class', 'title'],
-    div: ['style', 'class'],
+    div: ['style', 'class', 'data-info', 'data-info-type'],
     a: ['style', 'class', 'href', 'title', 'target'],
     img: ['style', 'class', 'src', 'alt', 'title', 'width', 'height'],
     video: [
