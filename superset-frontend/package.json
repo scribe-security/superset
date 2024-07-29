@@ -209,6 +209,7 @@
     "rison": "^0.1.1",
     "scroll-into-view-if-needed": "^2.2.28",
     "shortid": "^2.2.6",
+    "superset-plugin-chart-flow-graph": "^0.1.0",
     "terser-webpack-plugin": "^5.3.10",
     "tinycolor2": "^1.4.2",
     "urijs": "^1.19.8",
