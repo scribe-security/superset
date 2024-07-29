@@ -31,6 +31,7 @@ import Flow from './components/Flow';
 // imported from @superset-ui/core. For variables available, please visit
 // https://github.com/apache-superset/superset-ui/blob/master/packages/superset-ui-core/src/style/index.ts
 
+// eslint-disable-next-line theme-colors/no-literal-colors
 const Styles = styled.div<SupersetPluginChartFlowGraphStylesProps>`
   background-color: white;
   padding: ${({ theme }) => theme.gridUnit * 4}px;

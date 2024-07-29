@@ -1,4 +1,9 @@
 import { t } from '@superset-ui/core';
+
+import {
+  ControlStateMapping,
+  CustomControlItem,
+} from '@superset-ui/chart-controls';
 import {
   Edge,
   Node,
@@ -7,10 +12,6 @@ import {
   SupersetPluginChartFlowGraphQueryFormData,
   SymbolType,
 } from './types';
-import {
-  ControlStateMapping,
-  CustomControlItem,
-} from '@superset-ui/chart-controls';
 
 export type NodeTreeType = {
   id: string;
@@ -53,7 +54,7 @@ export const buildTree = (
       const tooltipText = log.tooltipCol;
       let label: string = log.labelCol || id;
       if (label.length > overflowText) {
-        label = label.substring(0, overflowText) + '...';
+        label = `${label.substring(0, overflowText)}...`;
       }
       const typeValue = log.colorCol;
       const edgeLabel: string = log.edgeLabelCol || '';
@@ -97,11 +98,8 @@ export const buildTree = (
           existingParent.children.push(treeNode);
         } else {
           // Parent node with parentId does not exist, add edge later when parent is created
-          if (parentId in nodesToBeUpdated) {
-            nodesToBeUpdated[parentId].push(treeNode);
-          } else {
-            nodesToBeUpdated[parentId] = [treeNode];
-          }
+          nodesToBeUpdated[parentId] = nodesToBeUpdated[parentId] || [];
+          nodesToBeUpdated[parentId].push(treeNode);
         }
       } else {
         // Node with id does not exist
@@ -128,11 +126,8 @@ export const buildTree = (
           treeNode.parents.push(existingParent);
         } else {
           // Parent node with parentId does not exist, add edge later when parent is created
-          if (parentId in nodesToBeUpdated) {
-            nodesToBeUpdated[parentId].push(treeNode);
-          } else {
-            nodesToBeUpdated[parentId] = [treeNode];
-          }
+          nodesToBeUpdated[parentId] = nodesToBeUpdated[parentId] || [];
+          nodesToBeUpdated[parentId].push(treeNode);
         }
 
         // Building nodes/edges logic v
@@ -178,12 +173,12 @@ export function RGBAToHexA(obj: RGBA, defaultColor = '') {
   let bStr = obj.b.toString(16);
   let aStr = Math.round(obj.a * 255).toString(16);
 
-  if (rStr.length == 1) rStr = '0' + rStr;
-  if (gStr.length == 1) gStr = '0' + gStr;
-  if (bStr.length == 1) bStr = '0' + bStr;
-  if (aStr.length == 1) aStr = '0' + aStr;
+  if (rStr.length === 1) rStr = `0${rStr}`;
+  if (gStr.length === 1) gStr = `0${gStr}`;
+  if (bStr.length === 1) bStr = `0${bStr}`;
+  if (aStr.length === 1) aStr = `0${aStr}`;
 
-  return '#' + rStr + gStr + bStr + aStr;
+  return `#${rStr}${gStr}${bStr}${aStr}`;
 }
 
 const plusImg =
@@ -256,7 +251,7 @@ const addChildNodes = (
             return word;
           })
           .join(' '),
-        extraCssText: 'text-align: left; ', //width: 200px; text-wrap: wrap;",
+        extraCssText: 'text-align: left; ', // width: 200px; text-wrap: wrap;",
       };
     }
     nodes.push(n);
@@ -310,14 +305,13 @@ const removeChildNodes = (
   // For each child, remove current node from expandedBy field and remove edge from node to child
   // If child is no longer expanded by any parents, remove the child node and recurse on its children
   node.children.forEach(child => {
+    // eslint-disable-next-line no-param-reassign
     child.expandedBy = child.expandedBy.filter(b => b.id !== node.id);
     edges = edges.filter(e => e.id !== `${node.id}-${child.id}`);
 
     if (child.expandedBy.length === 0) {
       nodes = nodes.filter(n => n.id !== child.id);
-      const res = removeChildNodes(child, nodes, edges);
-      nodes = res.nodes;
-      edges = res.edges;
+      ({ nodes, edges } = removeChildNodes(child, nodes, edges));
     }
   });
 
@@ -430,7 +424,7 @@ export const generateNumeratedControls = (
   const controls: CustomControlItem[][] = [];
   let currentRow: CustomControlItem[] = [];
 
-  for (let i = 1; i <= count; i++) {
+  Array.from({ length: count }, (_, i) => i + 1).forEach(i => {
     const c = {
       name: template.name + i,
       config: {
@@ -442,9 +436,8 @@ export const generateNumeratedControls = (
     if (i === 1) {
       c.config.description = desc;
     } else {
-      c.config.visibility = (controls: any) => {
-        return colorVisibility(controls, i, visibilityCol);
-      };
+      c.config.visibility = (controls: any) =>
+        colorVisibility(controls, i, visibilityCol);
     }
 
     currentRow.push(c);
@@ -452,7 +445,7 @@ export const generateNumeratedControls = (
       controls.push(currentRow);
       currentRow = [];
     }
-  }
+  });
 
   if (currentRow.length !== 0) {
     controls.push(currentRow);
@@ -468,7 +461,7 @@ const colorVisibility = (
   column: string,
 ) => {
   if (controls.chart.queriesResponse) {
-    const data = controls.chart.queriesResponse[0].data;
+    const { data } = controls.chart.queriesResponse[0];
     const columnOptions: string[] = [];
     if (data && data.length >= 0) {
       data.forEach((d: SupersetPluginChartFlowGraphQueryFormData) => {
@@ -494,6 +487,7 @@ export const buildAllNodes = (tree: NodeTreeType[]) => {
       id: t.id,
       name: t.label,
       itemStyle: {
+        // eslint-disable-next-line theme-colors/no-literal-colors
         color: '#f77ef5',
       },
       symbol: 'roundRect',
