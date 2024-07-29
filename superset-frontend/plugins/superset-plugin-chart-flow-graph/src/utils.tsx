@@ -1,4 +1,8 @@
 import {
+  ControlStateMapping,
+  CustomControlItem,
+} from '@superset-ui/chart-controls';
+import {
   Edge,
   Node,
   RGBA,
@@ -7,10 +11,6 @@ import {
   SymbolType,
   TypeMapping,
 } from './types';
-import {
-  ControlStateMapping,
-  CustomControlItem,
-} from '@superset-ui/chart-controls';
 import { DEFAULT_NODE_COLOR } from './plugin/controlPanel';
 
 export type NodeTreeType = {
@@ -420,7 +420,7 @@ export const generateNumeratedControls = (
 ) => {
   const controls: CustomControlItem[][] = [];
 
-  for (let i = 1; i <= count; i++) {
+  Array.from({ length: count }, (_, i) => i + 1).forEach(i => {
     const newRow = template.map(item => ({
       name: item.name + i,
       config: {
@@ -431,7 +431,7 @@ export const generateNumeratedControls = (
     }));
 
     controls.push(newRow);
-  }
+  });
 
   return controls;
 };
