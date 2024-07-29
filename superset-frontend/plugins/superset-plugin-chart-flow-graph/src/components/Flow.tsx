@@ -31,6 +31,10 @@ const useLayoutedElements = () => {
     'elk.spacing.nodeNode': 80,
     // "elk.separateConnectedComponents": false,
     'elk.spacing.componentComponent': 80,
+    'elk.partitioning.activate': true,
+    'elk.separateConnectedComponents': false,
+    // 'elk.interactiveLayout': true,
+    // 'elk.layered.generatePositionAndLayerIds': true,
   };
   const getLayoutedElements = useCallback(
     (
@@ -105,9 +109,8 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
 
     const { tree } = buildTree(
       props.data as unknown as SupersetData[],
-      props.nodeColors,
+      props.typeMapping,
       props.edgeColors,
-      props.nodeShapes,
       props.collapseChildren,
       props.overflowText,
       props.ttAutoLink,
@@ -137,8 +140,7 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     // }, 1000);
   }, [
     props.data,
-    props.nodeColors,
-    props.nodeShapes,
+    props.typeMapping,
     props.edgeColors,
     props.overflowText,
     props.ttAutoLink,

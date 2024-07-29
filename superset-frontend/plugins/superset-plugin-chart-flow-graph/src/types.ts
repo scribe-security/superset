@@ -25,14 +25,13 @@ export interface SupersetPluginChartFlowGraphStylesProps {
 
 interface SupersetPluginChartFlowGraphCustomizeProps {
   headerText: string;
-  nodeShapes: SymbolType[];
+  typeMapping: TypeMapping;
   nodeSizeW: number;
   nodeSizeH: number;
   textOffset: number;
   overflowText: number;
   nodeScaleRatio: number;
   collapseChildren: number;
-  nodeColors: string[];
   edgeColors: string[];
   nodeNode: string;
   nodeNodeBetweenLayers: string;
@@ -82,6 +81,11 @@ export type SymbolType =
   | 'diamond'
   | 'pin'
   | 'arrow';
+
+export type TypeMapping = {
+  [type: string]: { color: string; shape: SymbolType; layerId: number };
+};
+
 export type Node = {
   id: string;
   name: string;

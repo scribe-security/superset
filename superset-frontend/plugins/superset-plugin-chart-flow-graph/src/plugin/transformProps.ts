@@ -24,6 +24,7 @@ import {
   DEFAULT_TOOLTIP_BG_COLOR,
   DEFAULT_TOOLTIP_TEXT_COLOR,
 } from './controlPanel';
+import { TypeMapping } from '../types';
 
 export default function transformProps(chartProps: ChartProps) {
   /**
@@ -100,13 +101,6 @@ export default function transformProps(chartProps: ChartProps) {
     count: d.count,
   }));
 
-  const nodeColors = Object.entries(formData)
-    .filter(([k, _]) => k.startsWith('color') && k !== 'colorCol')
-    .map(([_, v]) => {
-      if (typeof v === 'string') return v;
-      else return RGBAToHexA(v, RGBAToHexA(DEFAULT_NODE_COLOR));
-    });
-
   const edgeColors = Object.entries(formData)
     .filter(([k, _]) => k.startsWith('edgeColor') && k !== 'edgeColorCol')
     .map(([_, v]) => {
@@ -114,15 +108,25 @@ export default function transformProps(chartProps: ChartProps) {
       else return RGBAToHexA(v, RGBAToHexA(DEFAULT_EDGE_COLOR));
     });
 
-  const nodeShapes = Object.entries(formData)
-    .filter(([k, _]) => k.startsWith('shape'))
-    .map(([_, v]) => v);
+  const typeMapping: TypeMapping = {};
+  for (let i = 1; i <= 20; i++) {
+    const t = formData[`type${i}`];
+    const c = formData[`color${i}`];
+    if (t) {
+      typeMapping[t] = {
+        color:
+          c === 'string' ? c : RGBAToHexA(c, RGBAToHexA(DEFAULT_NODE_COLOR)),
+        shape: formData[`shape${i}`],
+        layerId: Number(formData[`layer${i}`]),
+      };
+    }
+  }
 
   let fixedScaleRatio = nodeScaleRatio;
   if (nodeScaleRatio === undefined) {
     fixedScaleRatio = 0;
   }
-
+  console.log(typeMapping);
   return {
     width,
     height,
@@ -131,8 +135,7 @@ export default function transformProps(chartProps: ChartProps) {
     boldText,
     headerFontSize,
     headerText,
-    nodeColors,
-    nodeShapes,
+    typeMapping,
     nodeSizeW: Number(nodeSizeW),
     nodeSizeH: Number(nodeSizeH),
     textOffset: Number(textOffset),
