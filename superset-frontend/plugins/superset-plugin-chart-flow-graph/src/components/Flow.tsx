@@ -3,37 +3,34 @@ import React, {
   SetStateAction,
   useCallback,
   useEffect,
-  useMemo,
-  useRef,
   useState,
-} from "react";
+} from 'react';
 import {
-  buildAllNodes,
   buildCollapseNodes,
   buildTree,
   nodeClick,
   NodeTreeType,
-} from "../utils";
+} from '../utils';
 
-import ELK from "elkjs/lib/elk.bundled.js";
-import EChartsRenderer from "./EChartsRenderer";
+import ELK from 'elkjs/lib/elk.bundled.js';
+import EChartsRenderer from './EChartsRenderer';
 import {
   Edge,
   Node,
   SupersetData,
   SupersetPluginChartFlowGraphProps,
-} from "../types";
-import { EChartsOption, ECElementEvent, ECharts } from "echarts";
+} from '../types';
+import { EChartsOption, ECElementEvent, ECharts } from 'echarts';
 
 // ELK layout logic
 const elk = new ELK();
 const useLayoutedElements = () => {
   const defaultOptions = {
-    "elk.algorithm": "layered",
-    "elk.layered.spacing.nodeNodeBetweenLayers": 80,
-    "elk.spacing.nodeNode": 80,
+    'elk.algorithm': 'layered',
+    'elk.layered.spacing.nodeNodeBetweenLayers': 80,
+    'elk.spacing.nodeNode': 80,
     // "elk.separateConnectedComponents": false,
-    "elk.spacing.componentComponent": 80,
+    'elk.spacing.componentComponent': 80,
   };
   const getLayoutedElements = useCallback(
     (
@@ -41,12 +38,12 @@ const useLayoutedElements = () => {
       nodes: Node[],
       edges: Edge[],
       setNodes: Dispatch<SetStateAction<Node[]>>,
-      nodeSize: { width: number; height: number }
+      nodeSize: { width: number; height: number },
     ) => {
       const layoutOptions = { ...defaultOptions, ...options };
-      console.log(layoutOptions);
+
       const graph = {
-        id: "root",
+        id: 'root',
         layoutOptions: layoutOptions,
         children: nodes.map((c: Node) => ({
           ...c,
@@ -82,7 +79,7 @@ const useLayoutedElements = () => {
         // });
       });
     },
-    []
+    [],
   );
 
   return { getLayoutedElements };
@@ -96,31 +93,40 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     nodeId: string;
     chart: any;
   }>();
+  const [chart, setChart] = useState<ECharts>();
 
   const { getLayoutedElements } = useLayoutedElements();
 
   useEffect(() => {
+    if (chart) {
+      chart?.resize();
+      chart?.dispatchAction({ type: 'restore' });
+    }
+
     const { tree } = buildTree(
       props.data as unknown as SupersetData[],
       props.nodeColors,
-      props.nodeShape,
-      props.collapseChildren
+      props.edgeColors,
+      props.nodeShapes,
+      props.collapseChildren,
+      props.overflowText,
+      props.ttAutoLink,
     );
     const { nodes, edges } = buildCollapseNodes(tree);
     console.log(nodes, edges);
     getLayoutedElements(
       {
-        "elk.algorithm": "layered",
-        "elk.layered.spacing.nodeNodeBetweenLayers":
+        'elk.algorithm': 'layered',
+        'elk.layered.spacing.nodeNodeBetweenLayers':
           props.nodeNodeBetweenLayers,
-        "elk.spacing.nodeNode": props.nodeNode,
+        'elk.spacing.nodeNode': props.nodeNode,
         // "elk.separateConnectedComponents": false,
-        "elk.spacing.componentComponent": props.componentComponent,
+        'elk.spacing.componentComponent': props.componentComponent,
       },
       nodes,
       edges,
       setNodes,
-      { width: props.nodeSizeW, height: props.nodeSizeH }
+      { width: props.nodeSizeW, height: props.nodeSizeH },
     );
     // console.log(tree);
     setTree(tree);
@@ -129,14 +135,21 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     // setTimeout(() => {
     //   getLayoutedElements({}, nodes, edges, setNodes);
     // }, 1000);
-  }, [props.data, props.nodeColors, props.nodeShape]);
+  }, [
+    props.data,
+    props.nodeColors,
+    props.nodeShapes,
+    props.edgeColors,
+    props.overflowText,
+    props.ttAutoLink,
+  ]);
 
   useEffect(() => {
     if (clickedNode) {
       const res = nodeClick(tree, nodes, edges, clickedNode.nodeId);
       if (
-        nodes.length !== res.nodes.length ||
-        edges.length !== res.edges.length
+        res &&
+        (nodes.length !== res.nodes.length || edges.length !== res.edges.length)
       ) {
         setClickedNode(undefined);
         if (
@@ -144,20 +157,27 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
           res.nodes.length > nodes.length ||
           res.edges.length > edges.length
         ) {
-          clickedNode.chart.dispatchAction({ type: "restore" });
+          const updatedResNodes = res.nodes.map(n => {
+            const oldNode = nodes.find(o => o.id === n.id);
+            if (oldNode) return { ...n, x: oldNode.x, y: oldNode.y };
+            return n;
+          });
+          // clickedNode.chart.dispatchAction({ type: 'restore' });
           getLayoutedElements(
             {
-              "elk.algorithm": "layered",
-              "elk.layered.spacing.nodeNodeBetweenLayers":
+              'elk.algorithm': 'layered',
+              'elk.layered.spacing.nodeNodeBetweenLayers':
                 props.nodeNodeBetweenLayers,
-              "elk.spacing.nodeNode": props.nodeNode,
+              'elk.spacing.nodeNode': props.nodeNode,
               // "elk.separateConnectedComponents": false,
-              "elk.spacing.componentComponent": props.componentComponent,
+              'elk.layered.crossingMinimization.forceNodeModelOrder': true,
+              'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+              'elk.spacing.componentComponent': props.componentComponent,
             },
-            res.nodes,
+            updatedResNodes,
             res.edges,
             setNodes,
-            { width: props.nodeSizeW, height: props.nodeSizeH }
+            { width: props.nodeSizeW, height: props.nodeSizeH },
           );
         } else {
           setNodes(res.nodes);
@@ -169,59 +189,74 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     }
   }, [clickedNode]);
   const option: EChartsOption = {
-    // tooltip: {},
+    tooltip: { enterable: true },
     animationDurationUpdate: 1500,
-    animationEasingUpdate: "quinticInOut",
-    // graphic: {
-    //   elements: [
-    //     {
-    //       type: "rect",
-    //       shape: { width: 200, height: 200 },
-    //       style: { fill: "gray" },
-    //       draggable: true,
-    //       textContent: { type: "text", name: "TESTING" },
-    //       textConfig: { position: "top" },
-    //     },
-    //   ],
-    // },
-    // dataZoom: [
-    //   {
-    //     type: "inside",
-    //     start: 0,
-    //     end: 100,
-    //   },
-    // ],
-    // grid: { show: true },
+    // animationEasingUpdate: "quinticInOut",
     series: [
       {
-        type: "graph",
+        id: 'graph',
+        type: 'graph',
         symbolSize: [props.nodeSizeW, props.nodeSizeH],
-        width: props.width,
-        height: props.height,
-        // symbolSize: [40, 20],
-        // zoom: 10,
         roam: true,
         label: {
           show: true,
+          align: 'left',
+          offset: [props.textOffset, 0],
+          rich: {
+            name: {
+              fontWeight: 'bold',
+            },
+          },
         },
-        edgeSymbol: ["circle", "arrow"],
-        edgeSymbolSize: [4, 10],
-        edgeLabel: {
-          fontSize: 20,
-        },
+        edgeSymbol: [props.edgeSymbolStart, props.edgeSymbolEnd],
+        edgeSymbolSize: [props.edgeSizeStart, props.edgeSizeEnd],
         nodeScaleRatio: props.nodeScaleRatio as 0.6,
-        draggable: true,
+        draggable: props.draggableNodes,
         data: nodes, //.map((n: any) => ({ ...n, symbolSize: n.width })),
         links: edges.map((e: any) => {
           const s = nodes.findIndex((n: Node) => n.id === e.source);
           const t = nodes.findIndex((n: Node) => n.id === e.target);
-          return { source: s, target: t };
+          return {
+            source: s,
+            target: t,
+            value: e.value,
+            lineStyle: e.lineStyle,
+          };
         }),
         lineStyle: {
           opacity: 0.9,
           width: 2,
           curveness: 0,
         },
+        edgeLabel: {
+          show: true,
+          formatter: '{c}',
+        },
+        tooltip: {
+          show: false,
+          textStyle: { color: props.ttTextColor },
+          backgroundColor: props.ttBackgroundColor,
+          position: function (point, params, dom, rect, size) {
+            const coords = chart?.convertToPixel({ seriesId: 'graph' }, [
+              (params as any).data.x,
+              (params as any).data.y,
+            ]);
+            if (coords) {
+              return [coords[0] + props.ttOffsetX, coords[1] + props.ttOffsetY];
+            } else {
+              return point;
+            }
+          },
+        },
+        center: undefined,
+        // edgeLabel: {
+        //   show: true,
+        //   formatter: function (params) {
+        //     console.log(params);
+        //     console.log(edges[params.data.source]);
+        //     return edges[params.data.source]?.label;
+        //   },
+        // },
       },
     ],
   };
@@ -231,8 +266,10 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
       <EChartsRenderer
         option={option}
         onNodeClick={(info: ECElementEvent, chart: ECharts) => {
-          setClickedNode({ nodeId: info.data?.id, chart });
+          setClickedNode({ nodeId: (info.data as Node)?.id, chart });
         }}
+        setChart={setChart}
+        settings={{ lazyUpdate: true }}
       />
     </>
   );

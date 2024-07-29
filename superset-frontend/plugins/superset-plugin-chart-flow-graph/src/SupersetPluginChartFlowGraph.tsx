@@ -32,7 +32,7 @@ import Flow from "./components/Flow";
 // https://github.com/apache-superset/superset-ui/blob/master/packages/superset-ui-core/src/style/index.ts
 
 const Styles = styled.div<SupersetPluginChartFlowGraphStylesProps>`
-  background-color: ${({ theme }) => theme.colors.secondary.light2};
+  background-color: white;
   padding: ${({ theme }) => theme.gridUnit * 4}px;
   border-radius: ${({ theme }) => theme.gridUnit * 2}px;
   height: ${({ height }) => height}px;
@@ -88,7 +88,6 @@ export default function SupersetPluginChartFlowGraph(
       height={height}
       width={width}
     >
-      <h3>{props.headerText}</h3>
       <Flow {...props} />
     </Styles>
   );

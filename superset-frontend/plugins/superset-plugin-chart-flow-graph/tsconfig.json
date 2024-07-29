@@ -7,10 +7,7 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": false,
     "jsx": "react",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
+    "lib": ["dom", "esnext"],
     "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,
@@ -29,16 +26,17 @@
     "emitDeclarationOnly": true,
     "resolveJsonModule": true,
     "types": ["jest"],
-    "typeRoots": [
-      "./node_modules/@types"
-    ]
+    "typeRoots": ["./node_modules/@types"]
   },
-  "exclude": [
-    "lib",
-    "test"
+  "exclude": ["lib", "test"],
+  "include": ["src/**/*", "types/**/*", "../../types/**/*"],
+  "references": [
+    {
+      "path": "../../packages/superset-ui-chart-controls"
+    },
+    {
+      "path": "../../packages/superset-ui-core"
+    }
   ],
-  "include": [
-    "src/**/*",
-    "types/**/*"
-  ]
+  "extends": "../../tsconfig.json"
 }

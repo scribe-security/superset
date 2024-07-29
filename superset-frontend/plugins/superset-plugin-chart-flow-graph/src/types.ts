@@ -20,7 +20,7 @@ import {
   QueryFormData,
   supersetTheme,
   TimeseriesDataRecord,
-} from "@superset-ui/core";
+} from '@superset-ui/core';
 
 export interface SupersetPluginChartFlowGraphStylesProps {
   height: number;
@@ -31,16 +31,29 @@ export interface SupersetPluginChartFlowGraphStylesProps {
 
 interface SupersetPluginChartFlowGraphCustomizeProps {
   headerText: string;
-  nodeShape: SymbolType;
+  nodeShapes: SymbolType[];
   nodeSizeW: number;
   nodeSizeH: number;
+  textOffset: number;
+  overflowText: number;
   nodeScaleRatio: number;
   collapseChildren: number;
-  nodeColors: RBGA[];
+  nodeColors: string[];
+  edgeColors: string[];
   nodeNode: string;
   nodeNodeBetweenLayers: string;
   componentComponent: string;
   autoLayout: boolean;
+  edgeSymbolStart: string;
+  edgeSymbolEnd: string;
+  edgeSizeStart: number;
+  edgeSizeEnd: number;
+  ttOffsetX: number;
+  ttOffsetY: number;
+  ttBackgroundColor: string;
+  ttTextColor: string;
+  ttAutoLink: boolean;
+  draggableNodes: boolean;
 }
 
 export type SupersetPluginChartFlowGraphQueryFormData = QueryFormData &
@@ -59,19 +72,22 @@ export type SupersetData = {
   parentIdCol: string;
   labelCol: string | undefined;
   colorCol: string | undefined;
+  edgeLabelCol: string | undefined;
+  edgeColorCol: string | undefined;
+  tooltipCol: string | undefined;
   count: number;
 };
 
-export type RBGA = { r: number; g: number; b: number; a: number };
+export type RGBA = { r: number; g: number; b: number; a: number };
 
 export type SymbolType =
-  | "circle"
-  | "rect"
-  | "roundRect"
-  | "triangle"
-  | "diamond"
-  | "pin"
-  | "arrow";
+  | 'circle'
+  | 'rect'
+  | 'roundRect'
+  | 'triangle'
+  | 'diamond'
+  | 'pin'
+  | 'arrow';
 export type Node = {
   id: string;
   name: string;
@@ -79,14 +95,18 @@ export type Node = {
   itemStyle: {
     color: string;
   };
-  width?: number;
-  height?: number;
   x?: number;
   y?: number;
+  value?: string;
+  label?: { formatter: string; rich?: { [styleName: string]: any } };
+  tooltip?: { [key: string]: any };
+  emphasis?: { [key: string]: any };
 };
 
 export type Edge = {
   id: string;
   source: string;
   target: string;
+  value: string;
+  lineStyle: { color: string };
 };

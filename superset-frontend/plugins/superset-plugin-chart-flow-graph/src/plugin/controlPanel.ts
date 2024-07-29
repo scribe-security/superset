@@ -16,15 +16,75 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { t, validateInteger, validateNonEmpty } from "@superset-ui/core";
+import { t, validateInteger, validateNonEmpty } from '@superset-ui/core';
 import {
   ControlPanelConfig,
   // sections,
   sharedControls,
-} from "@superset-ui/chart-controls";
-import { colorVisibility } from "../utils";
+} from '@superset-ui/chart-controls';
+import { generateNumeratedControls } from '../utils';
 
-const DEFAULT_NODE_COLOR = { r: 100, g: 194, b: 245, a: 1 };
+export const DEFAULT_NODE_COLOR = { r: 100, g: 194, b: 245, a: 1 };
+export const DEFAULT_EDGE_COLOR = { r: 0, g: 0, b: 0, a: 1 };
+export const DEFAULT_TOOLTIP_BG_COLOR = { r: 33, g: 72, b: 135, a: 1 };
+export const DEFAULT_TOOLTIP_TEXT_COLOR = { r: 255, g: 255, b: 255, a: 1 };
+
+const nodeShapes = generateNumeratedControls(
+  {
+    name: 'shape',
+    config: {
+      type: 'SelectControl',
+      label: t('Shape Group '),
+      default: 'rect',
+      choices: [
+        ['roundRect', 'Rounded Rectangle'],
+        ['rect', 'Rectangle'],
+        ['circle', 'Circle'],
+        ['triangle', 'Triangle'],
+        ['diamond', 'Diamond'],
+        ['pin', 'Pin'],
+        ['arrow', 'Arrow'],
+      ],
+      renderTrigger: true,
+    },
+  },
+  t(
+    'Run query with Node Color Column populated in order to choose different shapes',
+  ),
+  'colorCol',
+);
+
+const nodeColors = generateNumeratedControls(
+  {
+    name: 'color',
+    config: {
+      type: 'ColorPickerControl',
+      label: t('Color Group '),
+      renderTrigger: true,
+      default: DEFAULT_NODE_COLOR,
+    },
+  },
+  t(
+    'Run query with Node Color Column populated in order to choose different colors',
+  ),
+  'colorCol',
+);
+
+const edgeColors = generateNumeratedControls(
+  {
+    name: 'edgeColor',
+    config: {
+      type: 'ColorPickerControl',
+      label: t('Color Group '),
+      renderTrigger: true,
+      default: DEFAULT_EDGE_COLOR,
+    },
+  },
+  t(
+    'Run query with Edge Color Column populated in order to choose different colors',
+  ),
+  'edgeColorCol',
+);
 
 const config: ControlPanelConfig = {
   /**
@@ -104,453 +164,373 @@ const config: ControlPanelConfig = {
   // For control input types, see: superset-frontend/src/explore/components/controls/index.js
   controlPanelSections: [
     {
-      label: t("Query"),
+      label: t('Query'),
       expanded: true,
       controlSetRows: [
         [
           {
-            name: "idCol",
+            name: 'idCol',
             config: {
               ...sharedControls.entity,
-              label: t("ID Column"),
-              description: t("Column to use for id of each node"),
+              label: t('ID Column'),
+              description: t('Column to use for id of each node'),
             },
           },
         ],
         [
           {
-            name: "parentIdCol",
+            name: 'parentIdCol',
             config: {
               ...sharedControls.entity,
-              label: t("Parent ID Column"),
-              description: t("Column to use for parent id of each node"),
+              label: t('Parent ID Column'),
+              description: t('Column to use for parent id of each node'),
             },
           },
         ],
         [
           {
-            name: "labelCol",
+            name: 'labelCol',
             config: {
               ...sharedControls.series,
-              label: t("Node Label Column"),
+              label: t('Node Label Column'),
               description: t(
-                "Column to use for label of each node (defaults to ID column)"
+                'Column to use for label of each node (defaults to ID column)',
               ),
             },
           },
         ],
         [
           {
-            name: "colorCol",
+            name: 'colorCol',
             config: {
               ...sharedControls.series,
-              label: t("Node Color Column"),
+              label: t('Node Color Column'),
               description: t(
-                "Column to use for choosing different node colors"
+                'Column to use for choosing different node colors',
               ),
             },
           },
         ],
-        ["adhoc_filters"],
         [
           {
-            name: "row_limit",
+            name: 'edgeLabelCol',
+            config: {
+              ...sharedControls.series,
+              label: t('Edge Label Column'),
+              description: t(
+                'Column to use for label of the edge to each child',
+              ),
+            },
+          },
+        ],
+        [
+          {
+            name: 'edgeColorCol',
+            config: {
+              ...sharedControls.series,
+              label: t('Edge Color Column'),
+              description: t(
+                'Column to use for choosing different edge colors',
+              ),
+            },
+          },
+        ],
+        [
+          {
+            name: 'tooltipCol',
+            config: {
+              ...sharedControls.series,
+              label: t('Tooltip Column'),
+              description: t(
+                'Column to use for displaying text in node tooltip (tooltips are able to render html)',
+              ),
+            },
+          },
+        ],
+        // [
+        //   {
+        //     name: "discoveryCol",
+        //     config: {
+        //       ...sharedControls.series,
+        //       label: t("Node Discovery Column"),
+        //       description: t(
+        //         "Column to use for choosing which type of nodes initially start on the graph"
+        //       ),
+        //     },
+        //   },
+        // ],
+        // [
+        //   {
+        //     name: "discoveryTypes",
+        //     config: {
+        //       type: "SelectControl",
+        //       label: t("Discovery Types"),
+        //       default: [],
+        //       description: "",
+        //       // mapStateToProps: ({ datasource, form_data }) => ({
+        //       //   columns:
+        //       //     !!datasource &&
+        //       //     "columns" in datasource &&
+        //       //     !("sqlEditorId" in datasource)
+        //       //       ? datasource.columns.filter((c) => c.filterable)
+        //       //       : datasource?.columns || [],
+        //       //   // savedMetrics: datasource?.hasOwnProperty("metrics")
+        //       //   //   ? datasource?.metrics || []
+        //       //   //   : [
+        //       //   //       {
+        //       //   //         metric_name: "COUNT(*)",
+        //       //   //         expression: "COUNT(*)",
+        //       //   //       },
+        //       //   //     ],
+        //       //   // // current active adhoc metrics
+        //       //   // selectedMetrics:
+        //       //   //   form_data.metrics ||
+        //       //   //   (form_data.metric ? [form_data.metric] : []),
+        //       //   datasource,
+        //       // }),
+        //       mapStateToProps: (state) => {
+        //         console.log(state);
+        //         return { choices: [] };
+        //       },
+        //       provideFormDataToProps: true,
+        //       multi: true,
+        //     },
+        //   },
+        // ],
+        ['adhoc_filters'],
+        [
+          {
+            name: 'row_limit',
             config: sharedControls.row_limit,
           },
         ],
       ],
     },
     {
-      label: t("Header Controls"),
+      label: t('Node Controls'),
       expanded: true,
       controlSetRows: [
         [
           {
-            name: "header_text",
+            name: 'overflowText',
             config: {
-              type: "TextControl",
-              default: "Flow Graph",
+              type: 'TextControl',
+              label: t('# of Characters in Label'),
+              default: 12,
               renderTrigger: true,
-              // ^ this makes it apply instantaneously, without triggering a "run query" button
-              label: t("Header Text"),
-              description: t("The text you want to see in the header"),
+              description: t(
+                'The number of characters in the node label before truncating and adding ellipsis',
+              ),
+            },
+          },
+          {
+            name: 'textOffset',
+            config: {
+              type: 'TextControl',
+              label: t('Text Offset'),
+              default: -45,
+              renderTrigger: true,
+              description: t('The offset value of the text inside the node'),
+              validators: [validateInteger, validateNonEmpty],
             },
           },
         ],
         [
           {
-            name: "bold_text",
+            name: 'nodeSizeW',
             config: {
-              type: "CheckboxControl",
-              label: t("Bold Text"),
+              type: 'TextControl',
+              label: t('Node Width'),
+              default: 120,
               renderTrigger: true,
-              default: true,
-              description: t("A checkbox to make the header bold"),
+              description: t('The width of your nodes'),
+              validators: [validateInteger, validateNonEmpty],
+            },
+          },
+          {
+            name: 'nodeSizeH',
+            config: {
+              type: 'TextControl',
+              label: t('Node Height'),
+              default: 60,
+              renderTrigger: true,
+              description: t('The height of your nodes'),
+              validators: [validateInteger, validateNonEmpty],
             },
           },
         ],
         [
           {
-            name: "header_font_size",
+            name: 'nodeScaleRatio',
             config: {
-              type: "SelectControl",
-              label: t("Font Size"),
-              default: "xl",
-              choices: [
-                // [value, label]
-                ["xxs", "xx-small"],
-                ["xs", "x-small"],
-                ["s", "small"],
-                ["m", "medium"],
-                ["l", "large"],
-                ["xl", "x-large"],
-                ["xxl", "xx-large"],
-              ],
-              renderTrigger: true,
-              description: t("The size of your header font"),
-            },
-          },
-        ],
-      ],
-    },
-    {
-      label: t("Node Controls"),
-      expanded: true,
-      controlSetRows: [
-        [
-          {
-            name: "nodeShape",
-            config: {
-              type: "SelectControl",
-              label: t("Node Shape"),
-              default: "roundRect",
-              choices: [
-                ["roundRect", "Rounded Rectangle"],
-                ["rect", "Rectangle"],
-                ["circle", "Circle"],
-                ["triangle", "Triangle"],
-                ["diamond", "Diamond"],
-                ["pin", "Pin"],
-                ["arrow", "Arrow"],
-              ],
-              renderTrigger: true,
-              description: t("The shape of your nodes"),
-            },
-          },
-        ],
-        [
-          {
-            name: "nodeSizeW",
-            config: {
-              type: "SliderControl",
-              label: t("Node Width"),
-              default: 80,
-              min: 5,
-              max: 400,
-              step: 5,
-              renderTrigger: true,
-              description: t("The width of your nodes"),
-            },
-          },
-          {
-            name: "nodeSizeH",
-            config: {
-              type: "SliderControl",
-              label: t("Node Height"),
-              default: 80,
-              min: 5,
-              max: 200,
-              step: 5,
-              renderTrigger: true,
-              description: t("The height of your nodes"),
-            },
-          },
-        ],
-        [
-          {
-            name: "nodeScaleRatio",
-            config: {
-              type: "SliderControl",
-              label: t("Node Scale Ratio"),
+              type: 'SliderControl',
+              label: t('Node Scale Ratio'),
               default: 0,
               min: 0,
               max: 1,
               step: 0.1,
               renderTrigger: true,
               description: t(
-                "The related zooming ratio of nodes when mouse zooming in or out"
+                'The related zooming ratio of nodes when mouse zooming in or out',
               ),
+            },
+          },
+        ],
+        ...nodeShapes,
+        ...nodeColors,
+      ],
+    },
+    {
+      label: t('Edge Controls'),
+      expanded: true,
+      controlSetRows: [
+        [
+          {
+            name: 'edgeSymbolStart',
+            config: {
+              type: 'SelectControl',
+              label: t('Start Edge Shape'),
+              default: 'circle',
+              choices: [
+                ['none', 'None'],
+                ['arrow', 'Arrow'],
+                ['circle', 'Circle'],
+              ],
+              renderTrigger: true,
+              description: t('The shape at the start of the edge'),
+            },
+          },
+          {
+            name: 'edgeSymbolEnd',
+            config: {
+              type: 'SelectControl',
+              label: t('End Edge Shape'),
+              default: 'arrow',
+              choices: [
+                ['none', 'None'],
+                ['arrow', 'Arrow'],
+                ['circle', 'Circle'],
+              ],
+              renderTrigger: true,
+              description: t('The shape at the end of the edge'),
             },
           },
         ],
         [
           {
-            name: "color1",
+            name: 'edgeSizeStart',
             config: {
-              type: "ColorPickerControl",
-              label: "Color Group 1",
+              type: 'SliderControl',
+              label: t('Edge Start Shape Size'),
+              default: 4,
+              min: 1,
+              max: 20,
               renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
+              description: t("The size of the edge's start shape"),
+            },
+          },
+          {
+            name: 'edgeSizeEnd',
+            config: {
+              type: 'SliderControl',
+              label: t('Edge End Shape Size'),
+              default: 10,
+              min: 1,
+              max: 20,
+              renderTrigger: true,
+              description: t("The size of the edge's start end"),
+            },
+          },
+        ],
+        ...edgeColors,
+      ],
+    },
+    {
+      label: t('Tooltip Controls'),
+      expanded: true,
+      controlSetRows: [
+        [
+          {
+            name: 'ttOffsetX',
+            config: {
+              type: 'TextControl',
+              label: t('Tooltip Position Offset X'),
+              default: '-100',
               description: t(
-                "Run query with Node Color Column populated in order to choose different colors"
+                'The x-coordinate offset of the tooltip from the default position',
               ),
+              renderTrigger: true,
+              validators: [validateInteger, validateNonEmpty],
             },
           },
           {
-            name: "color2",
+            name: 'ttOffsetY',
             config: {
-              type: "ColorPickerControl",
-              label: "Color Group 2",
+              type: 'TextControl',
+              label: t('Tooltip Position Offset Y'),
+              default: '25',
+              description: t(
+                'The y-coordinate offset of the tooltip from the default position',
+              ),
               renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 2);
-              },
-            },
-          },
-          {
-            name: "color3",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 3",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 3);
-              },
-            },
-          },
-          {
-            name: "color4",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 4",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 4);
-              },
+              validators: [validateInteger, validateNonEmpty],
             },
           },
         ],
         [
           {
-            name: "color5",
+            name: 'ttBackgroundColor',
             config: {
-              type: "ColorPickerControl",
-              label: "Color Group 5",
+              type: t('ColorPickerControl'),
+              label: t('Tooltip Color'),
               renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 5);
-              },
+              default: DEFAULT_TOOLTIP_BG_COLOR,
+              description: t('The color of the tooltip'),
             },
           },
           {
-            name: "color6",
+            name: 'ttTextColor',
             config: {
-              type: "ColorPickerControl",
-              label: "Color Group 6",
+              type: t('ColorPickerControl'),
+              label: t('Tooltip Text Color'),
               renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 6);
-              },
-            },
-          },
-          {
-            name: "color7",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 7",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 7);
-              },
-            },
-          },
-          {
-            name: "color8",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 8",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 8);
-              },
+              default: DEFAULT_TOOLTIP_TEXT_COLOR,
+              description: t('The color of the text in the tooltip'),
             },
           },
         ],
         [
           {
-            name: "color9",
+            name: 'ttAutoLink',
             config: {
-              type: "ColorPickerControl",
-              label: "Color Group 9",
+              type: 'CheckboxControl',
+              label: t('Auto Link'),
               renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 9);
-              },
-            },
-          },
-          {
-            name: "color10",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 10",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 10);
-              },
-            },
-          },
-          {
-            name: "color11",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 11",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 11);
-              },
-            },
-          },
-          {
-            name: "color12",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 12",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 12);
-              },
-            },
-          },
-        ],
-        [
-          {
-            name: "color13",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 13",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 13);
-              },
-            },
-          },
-          {
-            name: "color14",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 14",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 14);
-              },
-            },
-          },
-          {
-            name: "color15",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 15",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 15);
-              },
-            },
-          },
-          {
-            name: "color16",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 16",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 16);
-              },
-            },
-          },
-        ],
-        [
-          {
-            name: "color17",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 17",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 17);
-              },
-            },
-          },
-          {
-            name: "color18",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 18",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 18);
-              },
-            },
-          },
-          {
-            name: "color19",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 19",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 19);
-              },
-            },
-          },
-          {
-            name: "color20",
-            config: {
-              type: "ColorPickerControl",
-              label: "Color Group 20",
-              renderTrigger: true,
-              default: DEFAULT_NODE_COLOR,
-              visibility: (controls: any) => {
-                return colorVisibility(controls, 20);
-              },
+              default: true,
+              description: t(
+                'Automatically convert links in the tooltip text into actual html links',
+              ),
             },
           },
         ],
       ],
     },
     {
-      label: t("Graph Function Controls"),
+      label: t('Graph Function Controls'),
       expanded: true,
-      tabOverride: "customize",
       controlSetRows: [
         [
           {
-            name: "collapseChildren",
+            name: 'collapseChildren',
             config: {
-              type: "SliderControl",
-              label: t("Collapse Children Number"),
+              type: 'SliderControl',
+              label: t('Collapse Children Number'),
               min: 1,
               max: 5,
               default: 3,
+              renderTrigger: true,
               description: t(
-                "Number of children a node must have for the graph to begin with the children collapsed"
+                'Max number of children a node can have for its children to begin expanded',
               ),
             },
           },
@@ -558,47 +538,60 @@ const config: ControlPanelConfig = {
 
         [
           {
-            name: "nodeNode",
+            name: 'nodeNode',
             config: {
-              type: "TextControl",
-              label: t("Spacing: Node-Node"),
-              default: "80",
-              description: t("ELK.js node-node spacing setting"),
+              type: 'TextControl',
+              label: t('Spacing: Node-Node'),
+              default: '80',
+              description: t('ELK.js node-node spacing setting'),
+              renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
             },
           },
           {
-            name: "nodeNodeBetweenLayers",
+            name: 'nodeNodeBetweenLayers',
             config: {
-              type: "TextControl",
-              label: t("Node-Node Between Layers"),
-              default: "80",
-              description: t("ELK.js node-node between layers spacing setting"),
+              type: 'TextControl',
+              label: t('Node-Node Between Layers'),
+              default: '80',
+              description: t('ELK.js node-node between layers spacing setting'),
+              renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
             },
           },
           {
-            name: "componentComponent",
+            name: 'componentComponent',
             config: {
-              type: "TextControl",
-              label: t("Component-Component"),
-              default: "80",
-              description: t("ELK.js component-component spacing setting"),
+              type: 'TextControl',
+              label: t('Component-Component'),
+              default: '80',
+              description: t('ELK.js component-component spacing setting'),
+              renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
             },
           },
         ],
         [
           {
-            name: "autoLayout",
+            name: 'autoLayout',
             config: {
-              type: "CheckboxControl",
-              label: t("Auto Layout on Collapse"),
+              type: 'CheckboxControl',
+              label: t('Auto Layout on Collapse'),
               default: true,
               renderTrigger: true,
               description: t(
-                "Automatically run the layout algorithm after collapsing"
+                'Automatically run the layout algorithm after collapsing',
               ),
+            },
+          },
+          {
+            name: 'draggableNodes',
+            config: {
+              type: 'CheckboxControl',
+              label: t('Draggable Nodes'),
+              default: true,
+              renderTrigger: true,
+              description: t('Allow user to drag nodes'),
             },
           },
         ],
