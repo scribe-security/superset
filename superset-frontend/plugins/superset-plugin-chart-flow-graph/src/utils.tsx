@@ -1,9 +1,3 @@
-import { t } from '@superset-ui/core';
-
-import {
-  ControlStateMapping,
-  CustomControlItem,
-} from '@superset-ui/chart-controls';
 import {
   Edge,
   Node,
@@ -11,10 +5,17 @@ import {
   SupersetData,
   SupersetPluginChartFlowGraphQueryFormData,
   SymbolType,
+  TypeMapping,
 } from './types';
+import {
+  ControlStateMapping,
+  CustomControlItem,
+} from '@superset-ui/chart-controls';
+import { DEFAULT_NODE_COLOR } from './plugin/controlPanel';
 
 export type NodeTreeType = {
   id: string;
+  layerId: number;
   label: string;
   color: string;
   edgeColor: string;
@@ -34,16 +35,14 @@ export type NodeTreeType = {
  */
 export const buildTree = (
   data: SupersetData[],
-  colors: string[],
+  typeMapping: TypeMapping,
   edgeColors: string[],
-  nodeShapes: SymbolType[],
   collapseChildren: number,
   overflowText: number,
   autoLink: boolean,
 ) => {
   const tree: NodeTreeType[] = [];
   const nodesToBeUpdated: { [id: string]: NodeTreeType[] } = {};
-  const colorTypes: string[] = [];
   const edgeColorTypes: string[] = [];
 
   // Build tree from data
@@ -59,20 +58,16 @@ export const buildTree = (
       const typeValue = log.colorCol;
       const edgeLabel: string = log.edgeLabelCol || '';
 
-      let color: string;
-      let nodeShape: SymbolType;
+      let color: string = RGBAToHexA(DEFAULT_NODE_COLOR);
+      let layerId = 21;
+      let nodeShape: SymbolType = 'rect';
       if (log.colorCol) {
-        if (!colorTypes.includes(log.colorCol)) colorTypes.push(log.colorCol);
-        color = colors[colorTypes.findIndex(t => t === log.colorCol)];
-        nodeShape = nodeShapes[colorTypes.findIndex(t => t === log.colorCol)];
-
-        if (!color) {
-          color = colors[0];
-          nodeShape = nodeShapes[0];
+        const typeData = typeMapping[log.colorCol];
+        if (typeData) {
+          color = typeData.color;
+          nodeShape = typeData.shape;
+          layerId = typeData.layerId;
         }
-      } else {
-        color = colors[0];
-        nodeShape = nodeShapes[0];
       }
 
       let edgeColor: string;
@@ -105,6 +100,7 @@ export const buildTree = (
         // Node with id does not exist
         treeNode = {
           id,
+          layerId,
           label,
           color,
           edgeColor,
@@ -200,6 +196,8 @@ const addChildNodes = (
   if (!ignoreNodes.find(n => n === node.id)) {
     const n: Node = {
       id: node.id,
+      layoutOptions: { 'elk.partitioning.partition': node.layerId },
+
       name: node.label,
       itemStyle: {
         color: node.color,
@@ -416,39 +414,23 @@ export const nodeClick = (
 
 /** Generates repeated control panel controls */
 export const generateNumeratedControls = (
-  template: CustomControlItem,
-  desc: string,
-  visibilityCol: string,
+  template: CustomControlItem[],
+  visibilityColumn: string,
   count = 20,
 ) => {
   const controls: CustomControlItem[][] = [];
-  let currentRow: CustomControlItem[] = [];
 
-  Array.from({ length: count }, (_, i) => i + 1).forEach(i => {
-    const c = {
-      name: template.name + i,
+  for (let i = 1; i <= count; i++) {
+    const newRow = template.map(item => ({
+      name: item.name + i,
       config: {
-        ...template.config,
-        label: t(template.config.label?.toString() + i.toString()),
+        ...item.config,
+        visibility: (controls: ControlStateMapping) =>
+          colorVisibility(controls, i, visibilityColumn),
       },
-    };
+    }));
 
-    if (i === 1) {
-      c.config.description = desc;
-    } else {
-      c.config.visibility = (controls: any) =>
-        colorVisibility(controls, i, visibilityCol);
-    }
-
-    currentRow.push(c);
-    if (i % 4 === 0) {
-      controls.push(currentRow);
-      currentRow = [];
-    }
-  });
-
-  if (currentRow.length !== 0) {
-    controls.push(currentRow);
+    controls.push(newRow);
   }
 
   return controls;

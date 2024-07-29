@@ -29,62 +29,72 @@ export const DEFAULT_EDGE_COLOR = { r: 0, g: 0, b: 0, a: 1 };
 export const DEFAULT_TOOLTIP_BG_COLOR = { r: 33, g: 72, b: 135, a: 1 };
 export const DEFAULT_TOOLTIP_TEXT_COLOR = { r: 255, g: 255, b: 255, a: 1 };
 
-const nodeShapes = generateNumeratedControls(
-  {
-    name: 'shape',
-    config: {
-      type: 'SelectControl',
-      label: t('Shape Group '),
-      default: 'rect',
-      choices: [
-        ['roundRect', 'Rounded Rectangle'],
-        ['rect', 'Rectangle'],
-        ['circle', 'Circle'],
-        ['triangle', 'Triangle'],
-        ['diamond', 'Diamond'],
-        ['pin', 'Pin'],
-        ['arrow', 'Arrow'],
-      ],
-      renderTrigger: true,
+const nodeTypes = generateNumeratedControls(
+  [
+    {
+      name: 'type',
+      config: {
+        type: 'TextControl',
+        label: t('Type'),
+        renderTrigger: true,
+      },
     },
-  },
-  t(
-    'Run query with Node Color Column populated in order to choose different shapes',
-  ),
+    {
+      name: 'color',
+      config: {
+        type: 'ColorPickerControl',
+        label: t('Color'),
+        renderTrigger: true,
+        default: DEFAULT_NODE_COLOR,
+      },
+    },
+    {
+      name: 'shape',
+      config: {
+        type: 'SelectControl',
+        label: t('Shape'),
+        default: 'rect',
+        choices: [
+          ['roundRect', 'Rounded Rectangle'],
+          ['rect', 'Rectangle'],
+          ['circle', 'Circle'],
+          ['triangle', 'Triangle'],
+          ['diamond', 'Diamond'],
+          ['pin', 'Pin'],
+          ['arrow', 'Arrow'],
+        ],
+        renderTrigger: true,
+      },
+    },
+    {
+      name: 'layer',
+      config: {
+        type: 'TextControl',
+        label: t('Layer'),
+        renderTrigger: true,
+      },
+    },
+  ],
   'colorCol',
 );
 
-const nodeColors = generateNumeratedControls(
-  {
-    name: 'color',
-    config: {
-      type: 'ColorPickerControl',
-      label: t('Color Group '),
-      renderTrigger: true,
-      default: DEFAULT_NODE_COLOR,
-    },
-  },
-  t(
-    'Run query with Node Color Column populated in order to choose different colors',
-  ),
-  'colorCol',
-);
+console.log(nodeTypes);
 
-const edgeColors = generateNumeratedControls(
-  {
-    name: 'edgeColor',
-    config: {
-      type: 'ColorPickerControl',
-      label: t('Color Group '),
-      renderTrigger: true,
-      default: DEFAULT_EDGE_COLOR,
-    },
-  },
-  t(
-    'Run query with Edge Color Column populated in order to choose different colors',
-  ),
-  'edgeColorCol',
-);
+// const edgeColors = generateNumeratedControls(
+//   {
+//     name: 'edgeColor',
+//     config: {
+//       type: 'ColorPickerControl',
+//       label: t('Color Group '),
+//       renderTrigger: true,
+//       default: DEFAULT_EDGE_COLOR,
+//     },
+//   },
+//   t(
+//     'Run query with Edge Color Column populated in order to choose different colors',
+//   ),
+//   'edgeColorCol',
+// );
 
 const config: ControlPanelConfig = {
   /**
@@ -204,10 +214,8 @@ const config: ControlPanelConfig = {
             name: 'colorCol',
             config: {
               ...sharedControls.series,
-              label: t('Node Color Column'),
-              description: t(
-                'Column to use for choosing different node colors',
-              ),
+              label: t('Node Type Column'),
+              description: t('Column to use for choosing different node types'),
             },
           },
         ],
@@ -247,56 +255,6 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        // [
-        //   {
-        //     name: "discoveryCol",
-        //     config: {
-        //       ...sharedControls.series,
-        //       label: t("Node Discovery Column"),
-        //       description: t(
-        //         "Column to use for choosing which type of nodes initially start on the graph"
-        //       ),
-        //     },
-        //   },
-        // ],
-        // [
-        //   {
-        //     name: "discoveryTypes",
-        //     config: {
-        //       type: "SelectControl",
-        //       label: t("Discovery Types"),
-        //       default: [],
-        //       description: "",
-        //       // mapStateToProps: ({ datasource, form_data }) => ({
-        //       //   columns:
-        //       //     !!datasource &&
-        //       //     "columns" in datasource &&
-        //       //     !("sqlEditorId" in datasource)
-        //       //       ? datasource.columns.filter((c) => c.filterable)
-        //       //       : datasource?.columns || [],
-        //       //   // savedMetrics: datasource?.hasOwnProperty("metrics")
-        //       //   //   ? datasource?.metrics || []
-        //       //   //   : [
-        //       //   //       {
-        //       //   //         metric_name: "COUNT(*)",
-        //       //   //         expression: "COUNT(*)",
-        //       //   //       },
-        //       //   //     ],
-        //       //   // // current active adhoc metrics
-        //       //   // selectedMetrics:
-        //       //   //   form_data.metrics ||
-        //       //   //   (form_data.metric ? [form_data.metric] : []),
-        //       //   datasource,
-        //       // }),
-        //       mapStateToProps: (state) => {
-        //         console.log(state);
-        //         return { choices: [] };
-        //       },
-        //       provideFormDataToProps: true,
-        //       multi: true,
-        //     },
-        //   },
-        // ],
         ['adhoc_filters'],
         [
           {
@@ -376,8 +334,10 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        ...nodeShapes,
-        ...nodeColors,
+
+        ...nodeTypes,
+        // ...nodeShapes,
+        // ...nodeColors,
       ],
     },
     {
@@ -442,7 +402,7 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        ...edgeColors,
+        // ...edgeColors,
       ],
     },
     {
