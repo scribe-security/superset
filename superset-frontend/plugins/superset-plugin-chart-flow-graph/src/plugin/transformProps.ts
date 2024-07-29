@@ -16,7 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { ChartProps, TimeseriesDataRecord } from "@superset-ui/core";
+import { ChartProps, TimeseriesDataRecord } from '@superset-ui/core';
+import { RGBAToHexA } from '../utils';
+import {
+  DEFAULT_EDGE_COLOR,
+  DEFAULT_NODE_COLOR,
+  DEFAULT_TOOLTIP_BG_COLOR,
+  DEFAULT_TOOLTIP_TEXT_COLOR,
+} from './controlPanel';
 
 export default function transformProps(chartProps: ChartProps) {
   /**
@@ -57,27 +64,58 @@ export default function transformProps(chartProps: ChartProps) {
     parentIdCol,
     labelCol,
     colorCol,
-    nodeShape,
+    edgeColorCol,
+    edgeLabelCol,
+    tooltipCol,
     nodeSizeW,
     nodeSizeH,
+    textOffset,
+    overflowText,
     nodeScaleRatio,
     collapseChildren,
     nodeNode,
     nodeNodeBetweenLayers,
     componentComponent,
     autoLayout,
+    edgeSymbolStart,
+    edgeSymbolEnd,
+    edgeSizeStart,
+    edgeSizeEnd,
+    ttOffsetX,
+    ttOffsetY,
+    ttBackgroundColor,
+    ttTextColor,
+    ttAutoLink,
+    draggableNodes,
   } = formData;
 
-  const transformedData = data.map((d) => ({
+  const transformedData = data.map(d => ({
     idCol: d[idCol],
     parentIdCol: d[parentIdCol],
     labelCol: d[labelCol],
     colorCol: d[colorCol],
+    edgeColorCol: d[edgeColorCol],
+    edgeLabelCol: d[edgeLabelCol],
+    tooltipCol: d[tooltipCol],
     count: d.count,
   }));
 
   const nodeColors = Object.entries(formData)
-    .filter(([k, _]) => k.startsWith("color") && k !== "colorCol")
+    .filter(([k, _]) => k.startsWith('color') && k !== 'colorCol')
+    .map(([_, v]) => {
+      if (typeof v === 'string') return v;
+      else return RGBAToHexA(v, RGBAToHexA(DEFAULT_NODE_COLOR));
+    });
+
+  const edgeColors = Object.entries(formData)
+    .filter(([k, _]) => k.startsWith('edgeColor') && k !== 'edgeColorCol')
+    .map(([_, v]) => {
+      if (typeof v === 'string') return v;
+      else return RGBAToHexA(v, RGBAToHexA(DEFAULT_EDGE_COLOR));
+    });
+
+  const nodeShapes = Object.entries(formData)
+    .filter(([k, _]) => k.startsWith('shape'))
     .map(([_, v]) => v);
 
   let fixedScaleRatio = nodeScaleRatio;
@@ -94,14 +132,33 @@ export default function transformProps(chartProps: ChartProps) {
     headerFontSize,
     headerText,
     nodeColors,
-    nodeShape,
-    nodeSizeW,
-    nodeSizeH,
+    nodeShapes,
+    nodeSizeW: Number(nodeSizeW),
+    nodeSizeH: Number(nodeSizeH),
+    textOffset: Number(textOffset),
+    overflowText: Number(overflowText),
     nodeScaleRatio: fixedScaleRatio,
     collapseChildren,
     nodeNode,
     nodeNodeBetweenLayers,
     componentComponent,
     autoLayout,
+    edgeSymbolStart,
+    edgeSymbolEnd,
+    edgeSizeStart,
+    edgeSizeEnd,
+    edgeColors,
+    ttOffsetX: Number(ttOffsetX),
+    ttOffsetY: Number(ttOffsetY),
+    ttBackgroundColor: RGBAToHexA(
+      ttBackgroundColor,
+      RGBAToHexA(DEFAULT_TOOLTIP_BG_COLOR),
+    ),
+    ttTextColor: RGBAToHexA(
+      ttTextColor,
+      RGBAToHexA(DEFAULT_TOOLTIP_TEXT_COLOR),
+    ),
+    ttAutoLink,
+    draggableNodes,
   };
 }

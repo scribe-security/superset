@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { buildQueryContext, QueryFormData } from "@superset-ui/core";
+import { buildQueryContext, QueryFormData } from '@superset-ui/core';
 
 /**
  * The buildQuery function is used to create an instance of QueryContext that's
@@ -38,13 +38,18 @@ export default function buildQuery(formData: QueryFormData) {
     formData.parentIdCol,
     formData.labelCol,
     formData.colorCol,
-  ].filter((c) => c);
+    formData.edgeLabelCol,
+    formData.edgeColorCol,
+    formData.tooltipCol,
+  ]
+    .filter(c => c)
+    .filter((val, idx, arr) => arr.indexOf(val) === idx);
 
-  return buildQueryContext(formData, (baseQueryObject) => [
+  return buildQueryContext(formData, baseQueryObject => [
     {
       ...baseQueryObject,
       columns,
-      metrics: ["count"],
+      metrics: ['count'],
     },
   ]);
 }
