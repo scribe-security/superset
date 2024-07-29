@@ -105,10 +105,11 @@ const EChartsRenderer = ({
     // Update chart
     if (chartRef.current !== null) {
       const chart = getInstanceByDom(chartRef.current);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions,no-unused-expressions
       loading === true ? chart?.showLoading() : chart?.hideLoading();
       setChart(chart);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, theme]);
 
   return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
