@@ -113,7 +113,7 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
       props.ttAutoLink,
     );
     const { nodes, edges } = buildCollapseNodes(tree);
-    console.log(nodes, edges);
+    // console.log(nodes, edges);
     getLayoutedElements(
       {
         'elk.algorithm': 'layered',

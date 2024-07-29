@@ -16,13 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import React, { useEffect, createRef } from "react";
-import { styled } from "@superset-ui/core";
+import React, { createRef } from 'react';
+import { styled } from '@superset-ui/core';
 import {
   SupersetPluginChartFlowGraphProps,
   SupersetPluginChartFlowGraphStylesProps,
-} from "./types";
-import Flow from "./components/Flow";
+} from './types';
+import Flow from './components/Flow';
 
 // The following Styles component is a <div> element, which has been styled using Emotion
 // For docs, visit https://emotion.sh/docs/styled
@@ -42,15 +42,6 @@ const Styles = styled.div<SupersetPluginChartFlowGraphStylesProps>`
     /* You can use your props to control CSS! */
     margin-top: 0;
     margin-bottom: ${({ theme }) => theme.gridUnit * 3}px;
-    font-size: ${({ theme, headerFontSize }) =>
-      theme.typography.sizes[headerFontSize]}px;
-    font-weight: ${({ theme, boldText }) =>
-      theme.typography.weights[boldText ? "bold" : "normal"]};
-  }
-
-  pre {
-    height: ${({ theme, headerFontSize, height }) =>
-      height - theme.gridUnit * 12 - theme.typography.sizes[headerFontSize]}px;
   }
 `;
 
@@ -63,31 +54,25 @@ const Styles = styled.div<SupersetPluginChartFlowGraphStylesProps>`
  */
 
 export default function SupersetPluginChartFlowGraph(
-  props: SupersetPluginChartFlowGraphProps
+  props: SupersetPluginChartFlowGraphProps,
 ) {
   // height and width are the height and width of the DOM element as it exists in the dashboard.
   // There is also a `data` prop, which is, of course, your DATA 🎉
-  const { data, height, width } = props;
+  const { height, width } = props;
 
   const rootElem = createRef<HTMLDivElement>();
 
   // Often, you just want to access the DOM and do whatever you want.
   // Here, you can do that with createRef, and the useEffect hook.
-  useEffect(() => {
-    const root = rootElem.current as HTMLElement;
-    console.log("Plugin element", root);
-  });
+  // useEffect(() => {
+  //   const root = rootElem.current as HTMLElement;
+  //   console.log('Plugin element', root);
+  // });
 
-  console.log("Plugin props", props);
+  // console.log('Plugin props', props);
 
   return (
-    <Styles
-      ref={rootElem}
-      boldText={props.boldText}
-      headerFontSize={props.headerFontSize}
-      height={height}
-      width={width}
-    >
+    <Styles ref={rootElem} height={height} width={width}>
       <Flow {...props} />
     </Styles>
   );
