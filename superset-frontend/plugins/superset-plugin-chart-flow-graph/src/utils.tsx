@@ -4,31 +4,16 @@ import {
 } from '@superset-ui/chart-controls';
 import {
   Edge,
+  EdgeTypeMapping,
   Node,
+  NodeTreeType,
   RGBA,
   SupersetData,
   SupersetPluginChartFlowGraphQueryFormData,
   SymbolType,
   TypeMapping,
 } from './types';
-import { DEFAULT_NODE_COLOR } from './plugin/controlPanel';
-
-export type NodeTreeType = {
-  id: string;
-  layerId: number;
-  label: string;
-  color: string;
-  edgeColor: string;
-  edgeLabel: string;
-  typeValue: string | undefined;
-  tooltipText: string | undefined;
-  autoLink: boolean;
-  nodeShape: SymbolType;
-  collapseChildren: number;
-  expandedBy: NodeTreeType[];
-  parents: NodeTreeType[];
-  children: NodeTreeType[];
-};
+import { DEFAULT_EDGE_COLOR, DEFAULT_NODE_COLOR } from './constants';
 
 /** Given data from superset sql query, build tree object that
  *  serves as the data structure for the flow graph
@@ -36,14 +21,13 @@ export type NodeTreeType = {
 export const buildTree = (
   data: SupersetData[],
   typeMapping: TypeMapping,
-  edgeColors: string[],
+  edgeColors: EdgeTypeMapping,
   collapseChildren: number,
   overflowText: number,
   autoLink: boolean,
 ) => {
   const tree: NodeTreeType[] = [];
   const nodesToBeUpdated: { [id: string]: NodeTreeType[] } = {};
-  const edgeColorTypes: string[] = [];
 
   // Build tree from data
   data.forEach(log => {
@@ -59,26 +43,26 @@ export const buildTree = (
       const edgeLabel: string = log.edgeLabelCol || '';
 
       let color: string = RGBAToHexA(DEFAULT_NODE_COLOR);
-      let layerId = 21;
+      let layerId = -1;
       let nodeShape: SymbolType = 'rect';
+      let customImage: string | undefined;
       if (log.colorCol) {
-        const typeData = typeMapping[log.colorCol];
+        const typeData =
+          typeMapping[log.colorCol?.toLowerCase()] || typeMapping['*'];
+
         if (typeData) {
-          color = typeData.color;
-          nodeShape = typeData.shape;
-          layerId = typeData.layerId;
+          ({ color, shape: nodeShape, layerId, customImage } = typeData);
         }
       }
 
-      let edgeColor: string;
+      let edgeColor: string = RGBAToHexA(DEFAULT_EDGE_COLOR);
       if (log.edgeColorCol) {
-        if (!edgeColorTypes.includes(log.edgeColorCol))
-          edgeColorTypes.push(log.edgeColorCol);
         edgeColor =
-          edgeColors[edgeColorTypes.findIndex(t => t === log.edgeColorCol)];
-      } else {
-        edgeColor = edgeColors[0];
+          edgeColors[log.edgeColorCol?.toLowerCase()] ||
+          edgeColors['*'] ||
+          edgeColor;
       }
+
       // const nodesParent = nodes.find((v) => v.id === parentId);
       const existingNode = tree.find(v => v.id === id);
       let treeNode: NodeTreeType;
@@ -109,6 +93,7 @@ export const buildTree = (
           edgeLabel,
           autoLink,
           nodeShape,
+          customImage,
           collapseChildren,
           expandedBy: [],
           parents: [],
@@ -126,24 +111,6 @@ export const buildTree = (
           nodesToBeUpdated[parentId].push(treeNode);
         }
 
-        // Building nodes/edges logic v
-        // const existingParent = tree.find((v) => v.id === parentId);
-        // if (existingParent) {
-        //   // Parent node with parentId already exists, create edge from parent to child
-        //   edges.push({
-        //     id: `${parentId}-${id}`,
-        //     source: parentId,
-        //     target: id,
-        //   });
-        // } else {
-        //   // Parent node with parentId does not exist, add edge later when parent is created
-        //   if (parentId in nodesToBeUpdated) {
-        //     nodesToBeUpdated[parentId].push(id);
-        //   } else {
-        //     nodesToBeUpdated[parentId] = [id];
-        //   }
-        // }
-
         if (nodesToBeUpdated[id]) {
           // Add parent/child connection to existing child nodes
           treeNode.children.push(...nodesToBeUpdated[id]);
@@ -159,6 +126,45 @@ export const buildTree = (
   });
 
   return { tree };
+};
+
+/** Iterates through tree object to remove node objects that have
+ *  layerId=0, and connects these nodes' parents to these nodes' children
+ */
+export const filterZeros = (tree: NodeTreeType[]) => {
+  let newTree: NodeTreeType[] = structuredClone(tree);
+
+  const toRemove: string[] = [];
+  newTree.forEach(nodeObj => {
+    if (nodeObj.layerId === 0) {
+      // Update parents to skip this node
+      nodeObj.parents.forEach(parent => {
+        const newParent = parent;
+        newParent.children = parent.children.filter(c => c.id !== nodeObj.id);
+        newParent.children.push(...nodeObj.children);
+      });
+
+      // Update children to skip this node
+      nodeObj.children.forEach(child => {
+        const newChild = child;
+        newChild.parents = child.parents.filter(p => p.id !== nodeObj.id);
+        newChild.parents.push(...nodeObj.parents);
+
+        if (nodeObj.children.length <= nodeObj.collapseChildren) {
+          newChild.expandedBy = child.expandedBy.filter(
+            p => p.id !== nodeObj.id,
+          );
+          newChild.expandedBy.push(...nodeObj.expandedBy);
+        }
+      });
+
+      toRemove.push(nodeObj.id);
+    }
+  });
+
+  newTree = newTree.filter(t => !toRemove.includes(t.id));
+
+  return newTree;
 };
 
 /** Converts RGBA object to hexa string */
@@ -203,7 +209,11 @@ const addChildNodes = (
         color: node.color,
       },
       value: node.typeValue,
-      symbol: node.nodeShape,
+      symbol:
+        node.nodeShape === 'other'
+          ? node.customImage || 'rect'
+          : node.nodeShape,
+      category: node.typeValue,
     };
 
     const typeLabel = node.typeValue ? '{type|{c}}' : '';
@@ -416,6 +426,7 @@ export const nodeClick = (
 export const generateNumeratedControls = (
   template: CustomControlItem[],
   visibilityColumn: string,
+  otherOption?: CustomControlItem,
   count = 20,
 ) => {
   const controls: CustomControlItem[][] = [];
@@ -429,8 +440,20 @@ export const generateNumeratedControls = (
           colorVisibility(controls, i, visibilityColumn),
       },
     }));
-
     controls.push(newRow);
+
+    if (otherOption) {
+      controls.push([
+        {
+          name: otherOption.name + i,
+          config: {
+            ...otherOption.config,
+            visibility: (controls: ControlStateMapping) =>
+              controls.form_data[`shape${i}`] === 'other',
+          },
+        },
+      ]);
+    }
   });
 
   return controls;

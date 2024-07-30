@@ -1,4 +1,5 @@
 import {
+  ECElementEvent,
   ECharts,
   EChartsOption,
   getInstanceByDom,
@@ -14,7 +15,8 @@ export interface ReactEChartsProps {
   style?: CSSProperties;
   settings?: SetOptionOpts;
   loading?: boolean;
-  onNodeClick?: any;
+  onNodeClick?: (info: ECElementEvent, chart: ECharts) => void;
+  onLegendClick?: (info: any, chart: ECharts) => void;
   setChart: any;
   theme?: 'light' | 'dark';
 }
@@ -27,6 +29,7 @@ const EChartsRenderer = ({
   settings,
   loading,
   onNodeClick,
+  onLegendClick,
   setChart,
   theme,
 }: ReactEChartsProps) => {
@@ -55,6 +58,7 @@ const EChartsRenderer = ({
     if (chartRef.current) {
       const chart = getInstanceByDom(chartRef.current);
       chart?.off('click');
+      chart?.off('legendselectchanged');
       // chart?.off('graphroam');
       // chart?.on("click", { dataType: "node" }, () => {
       //   setTimeout(() => {
@@ -64,31 +68,15 @@ const EChartsRenderer = ({
       //   // chart?.dispatchAction({ type: "restore" });
       // });
       chart?.on('click', { dataType: 'node' }, info => {
-        if (chart) {
+        if (chart && onNodeClick) {
           onNodeClick(info, chart);
         }
       });
-      // chart?.on('graphroam', info => {
-      //   const gr = chart?.getOption().series[0];
-      //   // console.log(gr);
-      //   // console.log(chart?.getWidth(), chart?.getHeight());
-      //   const coords = chart?.convertToPixel({ seriesId: 'graph' }, [
-      //     gr.data[0].x,
-      //     gr.data[0].y,
-      //   ]);
-      //   // console.log(
-      //   //   gr.data[0].name,
-      //   //   coords,
-      //   //   chart?.containPixel({ seriesId: 'graph' }, coords),
-      //   // );
-      //   console.log(
-      //     chart?.containPixel({ seriesId: 'graph' }, [
-      //       chart?.getWidth() / 2,
-      //       chart?.getHeight() / 2,
-      //     ]),
-      //   );
-      // });
-      // chart?.updateLabelLayout();
+      chart?.on('legendselectchanged', info => {
+        if (chart && onLegendClick) {
+          onLegendClick(info, chart);
+        }
+      });
     }
   }, [chartRef.current]);
 

@@ -32,7 +32,7 @@ interface SupersetPluginChartFlowGraphCustomizeProps {
   overflowText: number;
   nodeScaleRatio: number;
   collapseChildren: number;
-  edgeColors: string[];
+  edgeColors: EdgeTypeMapping;
   nodeNode: string;
   nodeNodeBetweenLayers: string;
   componentComponent: string;
@@ -47,6 +47,10 @@ interface SupersetPluginChartFlowGraphCustomizeProps {
   ttTextColor: string;
   ttAutoLink: boolean;
   draggableNodes: boolean;
+  showLegend: boolean;
+  legendType: 'plain' | 'scroll';
+  legendMargin: number;
+  legendOrientation: 'top' | 'right' | 'bottom' | 'left';
 }
 
 export type SupersetPluginChartFlowGraphQueryFormData = QueryFormData &
@@ -80,19 +84,28 @@ export type SymbolType =
   | 'triangle'
   | 'diamond'
   | 'pin'
-  | 'arrow';
+  | 'arrow'
+  | 'other';
 
 export type TypeMapping = {
-  [type: string]: { color: string; shape: SymbolType; layerId: number };
+  [type: string]: {
+    color: string;
+    shape: SymbolType;
+    layerId: number;
+    customImage?: string;
+  };
 };
+
+export type EdgeTypeMapping = { [type: string]: string };
 
 export type Node = {
   id: string;
   name: string;
-  symbol: SymbolType;
+  symbol: SymbolType | string;
   itemStyle: {
     color: string;
   };
+  category?: string;
   x?: number;
   y?: number;
   value?: string;
@@ -108,4 +121,22 @@ export type Edge = {
   target: string;
   value: string;
   lineStyle: { color: string };
+};
+
+export type NodeTreeType = {
+  id: string;
+  layerId: number;
+  label: string;
+  color: string;
+  edgeColor: string;
+  edgeLabel: string;
+  typeValue: string | undefined;
+  tooltipText: string | undefined;
+  autoLink: boolean;
+  nodeShape: SymbolType;
+  customImage: string | undefined;
+  collapseChildren: number;
+  expandedBy: NodeTreeType[];
+  parents: NodeTreeType[];
+  children: NodeTreeType[];
 };
