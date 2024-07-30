@@ -19,15 +19,18 @@
 import { t, validateInteger, validateNonEmpty } from '@superset-ui/core';
 import {
   ControlPanelConfig,
+  ControlStateMapping,
   // sections,
   sharedControls,
 } from '@superset-ui/chart-controls';
 import { generateNumeratedControls } from '../utils';
-
-export const DEFAULT_NODE_COLOR = { r: 100, g: 194, b: 245, a: 1 };
-export const DEFAULT_EDGE_COLOR = { r: 0, g: 0, b: 0, a: 1 };
-export const DEFAULT_TOOLTIP_BG_COLOR = { r: 33, g: 72, b: 135, a: 1 };
-export const DEFAULT_TOOLTIP_TEXT_COLOR = { r: 255, g: 255, b: 255, a: 1 };
+import {
+  DEFAULT_EDGE_COLOR,
+  DEFAULT_NODE_COLOR,
+  DEFAULT_TOOLTIP_BG_COLOR,
+  DEFAULT_TOOLTIP_TEXT_COLOR,
+  EDGE_SYMBOL_CHOICES,
+} from '../constants';
 
 const nodeTypes = generateNumeratedControls(
   [
@@ -37,6 +40,9 @@ const nodeTypes = generateNumeratedControls(
         type: 'TextControl',
         label: t('Type'),
         renderTrigger: true,
+        description: t(
+          'Write in a type from Node Type Column (case-insensitive) or * to configure all unspecified types',
+        ),
       },
     },
     {
@@ -46,6 +52,7 @@ const nodeTypes = generateNumeratedControls(
         label: t('Color'),
         renderTrigger: true,
         default: DEFAULT_NODE_COLOR,
+        description: t('Choose a node color for the specified type'),
       },
     },
     {
@@ -55,46 +62,71 @@ const nodeTypes = generateNumeratedControls(
         label: t('Shape'),
         default: 'rect',
         choices: [
-          ['roundRect', 'Rounded Rectangle'],
-          ['rect', 'Rectangle'],
-          ['circle', 'Circle'],
-          ['triangle', 'Triangle'],
-          ['diamond', 'Diamond'],
-          ['pin', 'Pin'],
-          ['arrow', 'Arrow'],
+          ['rect', t('Rectangle')],
+          ['roundRect', t('Rounded Rectangle')],
+          ['circle', t('Circle')],
+          ['triangle', t('Triangle')],
+          ['diamond', t('Diamond')],
+          ['pin', t('Pin')],
+          ['arrow', t('Arrow')],
+          ['other', t('Other')],
         ],
         renderTrigger: true,
+        description: t('Choose a node shape for the specified type'),
       },
     },
     {
       name: 'layer',
       config: {
         type: 'TextControl',
-        label: t('Layer'),
+        label: t('Column'),
         renderTrigger: true,
+        description: t(
+          'Node types with a lower column number appear to the left of node types with a higher column number. Enter 0 for this column type to not appear at all (parents of this node type will connect to children of this node type)',
+        ),
       },
     },
   ],
   'colorCol',
+  {
+    name: 'shapeOther',
+    config: {
+      type: 'TextControl',
+      label: t('Shape Image'),
+      renderTrigger: true,
+      description: t(
+        'Image URL eg. "image://http://example.website/a/b.png" or dataURI eg. "image://data:image/gif;base64,R0lGODlhEAAQAMQAAORHHOVSKudfOulrSOp3WOyDZu6QdvCchPGolfO0o/XBs/fNwfjZ0frl3/zy7////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAkAABAALAAAAAAQABAAAAVVICSOZGlCQAosJ6mu7fiyZeKqNKToQGDsM8hBADgUXoGAiqhSvp5QAnQKGIgUhwFUYLCVDFCrKUE1lBavAViFIDlTImbKC5Gm2hB0SlBCBMQiB0UjIQA7"',
+      ),
+    },
+  },
 );
 
-console.log(nodeTypes);
-
-// const edgeColors = generateNumeratedControls(
-//   {
-//     name: 'edgeColor',
-//     config: {
-//       type: 'ColorPickerControl',
-//       label: t('Color Group '),
-//       renderTrigger: true,
-//       default: DEFAULT_EDGE_COLOR,
-//     },
-//   },
-//   t(
-//     'Run query with Edge Color Column populated in order to choose different colors',
-//   ),
-//   'edgeColorCol',
-// );
+const edgeColors = generateNumeratedControls(
+  [
+    {
+      name: 'edgeType',
+      config: {
+        type: 'TextControl',
+        label: t('Type'),
+        renderTrigger: true,
+        description: t(
+          'Write in a type from Edge Color Column (case-insensitive) or * to configure all unspecified types',
+        ),
+      },
+    },
+    {
+      name: 'edgeColor',
+      config: {
+        type: 'ColorPickerControl',
+        label: t('Color'),
+        renderTrigger: true,
+        default: DEFAULT_EDGE_COLOR,
+        description: t('Choose an edge color for the specified type'),
+      },
+    },
+  ],
+  'edgeColorCol',
+);
 
 const config: ControlPanelConfig = {
   /**
@@ -273,12 +305,10 @@ const config: ControlPanelConfig = {
             name: 'overflowText',
             config: {
               type: 'TextControl',
-              label: t('# of Characters in Label'),
+              label: t('Truncate Label'),
               default: 12,
               renderTrigger: true,
-              description: t(
-                'The number of characters in the node label before truncating and adding ellipsis',
-              ),
+              description: t('Ellipsis after # chars'),
             },
           },
           {
@@ -351,11 +381,7 @@ const config: ControlPanelConfig = {
               type: 'SelectControl',
               label: t('Start Edge Shape'),
               default: 'circle',
-              choices: [
-                ['none', 'None'],
-                ['arrow', 'Arrow'],
-                ['circle', 'Circle'],
-              ],
+              choices: EDGE_SYMBOL_CHOICES,
               renderTrigger: true,
               description: t('The shape at the start of the edge'),
             },
@@ -366,11 +392,7 @@ const config: ControlPanelConfig = {
               type: 'SelectControl',
               label: t('End Edge Shape'),
               default: 'arrow',
-              choices: [
-                ['none', 'None'],
-                ['arrow', 'Arrow'],
-                ['circle', 'Circle'],
-              ],
+              choices: EDGE_SYMBOL_CHOICES,
               renderTrigger: true,
               description: t('The shape at the end of the edge'),
             },
@@ -402,7 +424,7 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        // ...edgeColors,
+        ...edgeColors,
       ],
     },
     {
@@ -552,6 +574,74 @@ const config: ControlPanelConfig = {
               default: true,
               renderTrigger: true,
               description: t('Allow user to drag nodes'),
+            },
+          },
+        ],
+        [
+          {
+            name: 'showLegend',
+            config: {
+              type: 'CheckboxControl',
+              label: t('Show legend'),
+              renderTrigger: true,
+              default: true,
+              description: t('Whether to display a legend for the chart'),
+            },
+          },
+        ],
+
+        [
+          {
+            name: 'legendMargin',
+            config: {
+              type: 'TextControl',
+              label: t('Margin'),
+              renderTrigger: true,
+              default: '50',
+              description: t('Additional padding for legend.'),
+              visibility: (controls: ControlStateMapping) =>
+                Boolean(controls.form_data?.showLegend),
+            },
+          },
+        ],
+
+        [
+          {
+            name: 'legendType',
+            config: {
+              type: 'SelectControl',
+              freeForm: false,
+              label: t('Type'),
+              choices: [
+                ['scroll', t('Scroll')],
+                ['plain', t('Plain')],
+              ],
+              default: 'scroll',
+              renderTrigger: true,
+              description: t('Legend type'),
+              visibility: (controls: ControlStateMapping) =>
+                Boolean(controls.form_data?.showLegend),
+            },
+          },
+        ],
+        [
+          {
+            name: 'legendOrientation',
+            config: {
+              type: 'SelectControl',
+              freeForm: false,
+              label: t('Orientation'),
+              choices: [
+                ['top', t('Top')],
+                ['bottom', t('Bottom')],
+                ['left', t('Left')],
+                ['right', t('Right')],
+              ],
+              default: 'top',
+              renderTrigger: true,
+              description: t('Legend Orientation'),
+              visibility: (controls: ControlStateMapping) =>
+                Boolean(controls.form_data?.showLegend),
             },
           },
         ],

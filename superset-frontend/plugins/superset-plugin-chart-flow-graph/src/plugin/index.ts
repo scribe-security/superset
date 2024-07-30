@@ -35,8 +35,8 @@ export default class SupersetPluginChartFlowGraph extends ChartPlugin {
    */
   constructor() {
     const metadata = new ChartMetadata({
-      description: 'Superset Plugin Chart Flow Graph',
-      name: t('Flow Graph'),
+      description: 'Superset Plugin Chart Lineage Graph',
+      name: t('Lineage Graph'),
       thumbnail,
     });
 

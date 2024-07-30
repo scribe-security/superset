@@ -3,21 +3,28 @@ import React, {
   SetStateAction,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import { EChartsOption, ECElementEvent, ECharts } from 'echarts';
+import {
+  EChartsOption,
+  ECElementEvent,
+  ECharts,
+  LegendComponentOption,
+} from 'echarts';
 import {
   buildCollapseNodes,
   buildTree,
+  filterZeros,
   nodeClick,
-  NodeTreeType,
 } from '../utils';
 
 import EChartsRenderer from './EChartsRenderer';
 import {
   Edge,
   Node,
+  NodeTreeType,
   SupersetData,
   SupersetPluginChartFlowGraphProps,
 } from '../types';
@@ -91,23 +98,29 @@ const useLayoutedElements = () => {
 
 const Flow = (props: SupersetPluginChartFlowGraphProps) => {
   const [tree, setTree] = useState<NodeTreeType[]>([]);
+  const [legendTree, setLegendTree] = useState<NodeTreeType[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [clickedNode, setClickedNode] = useState<{
     nodeId: string;
-    chart: any;
+    chart: ECharts;
   }>();
+  const [selectedTypes, setSelectedTypes] =
+    useState<{ [key: string]: boolean }>();
   const [chart, setChart] = useState<ECharts>();
 
   const { getLayoutedElements } = useLayoutedElements();
 
   useEffect(() => {
+    /** On initial render (and when certain settings require rebuilding tree),
+     * build tree from data, use tree to make nodes/edges, and pass through ELK
+     */
     if (chart) {
       chart?.resize();
       chart?.dispatchAction({ type: 'restore' });
     }
 
-    const { tree } = buildTree(
+    let { tree } = buildTree(
       props.data as unknown as SupersetData[],
       props.typeMapping,
       props.edgeColors,
@@ -115,8 +128,10 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
       props.overflowText,
       props.ttAutoLink,
     );
+    tree = filterZeros(tree);
+
     const { nodes, edges } = buildCollapseNodes(tree);
-    // console.log(nodes, edges);
+
     getLayoutedElements(
       {
         'elk.algorithm': 'layered',
@@ -131,13 +146,9 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
       setNodes,
       { width: props.nodeSizeW, height: props.nodeSizeH },
     );
-    // console.log(tree);
     setTree(tree);
-    // setNodes(nodes);
+    setLegendTree(tree);
     setEdges(edges);
-    // setTimeout(() => {
-    //   getLayoutedElements({}, nodes, edges, setNodes);
-    // }, 1000);
   }, [
     props.data,
     props.typeMapping,
@@ -146,9 +157,39 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     props.ttAutoLink,
   ]);
 
+  const legend = useMemo(() => {
+    const l: LegendComponentOption = {
+      show: props.showLegend,
+      type: props.legendType,
+      [props.legendOrientation]: 0,
+    };
+
+    if (props.legendOrientation === 'top') {
+      l.orient = 'horizontal';
+      l.padding = [props.legendMargin, 0, 0, 0];
+    } else if (props.legendOrientation === 'bottom') {
+      l.orient = 'horizontal';
+      l.padding = [0, 0, props.legendMargin, 0];
+    } else if (props.legendOrientation === 'left') {
+      l.orient = 'vertical';
+      l.padding = [0, 0, 0, props.legendMargin];
+    } else {
+      l.orient = 'vertical';
+      l.padding = [0, props.legendMargin, 0, 0];
+    }
+
+    return l;
+  }, [
+    props.showLegend,
+    props.legendMargin,
+    props.legendOrientation,
+    props.legendType,
+  ]);
+
   useEffect(() => {
+    /** When node is clicked, expand or collapse subgraphs */
     if (clickedNode) {
-      const res = nodeClick(tree, nodes, edges, clickedNode.nodeId);
+      const res = nodeClick(legendTree, nodes, edges, clickedNode.nodeId);
       if (
         res &&
         (nodes.length !== res.nodes.length || edges.length !== res.edges.length)
@@ -186,18 +227,55 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
         }
 
         setEdges(res.edges);
-        setTree(res.tree);
+        setLegendTree(res.tree);
       }
     }
   }, [clickedNode]);
+
+  useEffect(() => {
+    if (selectedTypes) {
+      const newTree = filterZeros(
+        tree.map(t => {
+          if (t.typeValue && !selectedTypes[t.typeValue])
+            return { ...t, layerId: 0 };
+          return { ...t };
+        }),
+      );
+      setLegendTree(newTree);
+
+      const { nodes: newNodes, edges: newEdges } = buildCollapseNodes(newTree);
+
+      getLayoutedElements(
+        {
+          'elk.algorithm': 'layered',
+          'elk.layered.spacing.nodeNodeBetweenLayers':
+            props.nodeNodeBetweenLayers,
+          'elk.spacing.nodeNode': props.nodeNode,
+          // "elk.separateConnectedComponents": false,
+          'elk.layered.crossingMinimization.forceNodeModelOrder': true,
+          'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+          'elk.spacing.componentComponent': props.componentComponent,
+        },
+        newNodes,
+        newEdges,
+        setNodes,
+        { width: props.nodeSizeW, height: props.nodeSizeH },
+      );
+      setEdges(newEdges);
+    }
+  }, [selectedTypes]);
+
+  /** Master ECharts configuration option object */
   const option: EChartsOption = {
     tooltip: { enterable: true },
     animationDurationUpdate: 1500,
     // animationEasingUpdate: "quinticInOut",
+    legend,
     series: [
       {
         id: 'graph',
         type: 'graph',
+        name: 'Lineage Graph',
         symbolSize: [props.nodeSizeW, props.nodeSizeH],
         roam: true,
         label: {
@@ -210,6 +288,13 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
             },
           },
         },
+        // emphasis: {
+        //   focus: 'adjacency',
+        // },
+        categories: tree
+          .map(n => n.typeValue)
+          .filter((val, idx, arr) => arr.indexOf(val) === idx)
+          .map(n => ({ name: n })),
         edgeSymbol: [props.edgeSymbolStart, props.edgeSymbolEnd],
         edgeSymbolSize: [props.edgeSizeStart, props.edgeSizeEnd],
         nodeScaleRatio: props.nodeScaleRatio as 0.6,
@@ -250,14 +335,6 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
           },
         },
         center: undefined,
-        // edgeLabel: {
-        //   show: true,
-        //   formatter: function (params) {
-        //     console.log(params);
-        //     console.log(edges[params.data.source]);
-        //     return edges[params.data.source]?.label;
-        //   },
-        // },
       },
     ],
   };
@@ -268,6 +345,9 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
         option={option}
         onNodeClick={(info: ECElementEvent, chart: ECharts) => {
           setClickedNode({ nodeId: (info.data as Node)?.id, chart });
+        }}
+        onLegendClick={(info: any, chart: ECharts) => {
+          setSelectedTypes(info.selected);
         }}
         setChart={setChart}
         settings={{ lazyUpdate: true }}
