@@ -23,7 +23,8 @@ import {
   DEFAULT_NODE_COLOR,
   DEFAULT_TOOLTIP_BG_COLOR,
   DEFAULT_TOOLTIP_TEXT_COLOR,
-} from './controlPanel';
+} from '../constants';
+import { EdgeTypeMapping, TypeMapping } from '../types';
 
 export default function transformProps(chartProps: ChartProps) {
   /**
@@ -87,6 +88,10 @@ export default function transformProps(chartProps: ChartProps) {
     ttTextColor,
     ttAutoLink,
     draggableNodes,
+    showLegend,
+    legendType,
+    legendMargin,
+    legendOrientation,
   } = formData;
 
   const transformedData = data.map(d => ({
@@ -100,23 +105,35 @@ export default function transformProps(chartProps: ChartProps) {
     count: d.count,
   }));
 
-  const nodeColors = Object.entries(formData)
-    .filter(([k, _]) => k.startsWith('color') && k !== 'colorCol')
-    .map(([_, v]) => {
-      if (typeof v === 'string') return v;
-      return RGBAToHexA(v, RGBAToHexA(DEFAULT_NODE_COLOR));
-    });
+  // const edgeColors = Object.entries(formData)
+  //   .filter(([k, _]) => k.startsWith('edgeColor') && k !== 'edgeColorCol')
+  //   .map(([_, v]) => {
+  //     if (typeof v === 'string') return v;
+  //     return RGBAToHexA(v, RGBAToHexA(DEFAULT_EDGE_COLOR));
+  //   });
+  const edgeColors: EdgeTypeMapping = {};
 
-  const edgeColors = Object.entries(formData)
-    .filter(([k, _]) => k.startsWith('edgeColor') && k !== 'edgeColorCol')
-    .map(([_, v]) => {
-      if (typeof v === 'string') return v;
-      return RGBAToHexA(v, RGBAToHexA(DEFAULT_EDGE_COLOR));
-    });
+  const typeMapping: TypeMapping = {};
+  for (let i = 1; i <= 20; i += 1) {
+    const t = formData[`type${i}`]?.toLowerCase();
+    const c = formData[`color${i}`];
+    if (t) {
+      typeMapping[t] = {
+        color:
+          c === 'string' ? c : RGBAToHexA(c, RGBAToHexA(DEFAULT_NODE_COLOR)),
+        shape: formData[`shape${i}`],
+        layerId: Number(formData[`layer${i}`]),
+        customImage: formData[`shapeOther${i}`],
+      };
+    }
 
-  const nodeShapes = Object.entries(formData)
-    .filter(([k, _]) => k.startsWith('shape'))
-    .map(([_, v]) => v);
+    const eT = formData[`edgeType${i}`]?.toLowerCase();
+    const eC = formData[`edgeColor${i}`];
+    if (eT) {
+      edgeColors[eT] =
+        eC === 'string' ? eC : RGBAToHexA(eC, RGBAToHexA(DEFAULT_EDGE_COLOR));
+    }
+  }
 
   let fixedScaleRatio = nodeScaleRatio;
   if (nodeScaleRatio === undefined) {
@@ -131,8 +148,7 @@ export default function transformProps(chartProps: ChartProps) {
     boldText,
     headerFontSize,
     headerText,
-    nodeColors,
-    nodeShapes,
+    typeMapping,
     nodeSizeW: Number(nodeSizeW),
     nodeSizeH: Number(nodeSizeH),
     textOffset: Number(textOffset),
@@ -160,5 +176,9 @@ export default function transformProps(chartProps: ChartProps) {
     ),
     ttAutoLink,
     draggableNodes,
+    showLegend,
+    legendType,
+    legendMargin: Number(legendMargin),
+    legendOrientation,
   };
 }
