@@ -76,7 +76,17 @@ export default async function callApi({
   searchParams,
 }: CallApi): Promise<Response> {
   const fetchWithRetry = fetchRetry(fetch, fetchRetryOptions);
-  const url = `${getFullUrl(url_, searchParams)}`;
+
+  let url = `${getFullUrl(url_, searchParams)}`;
+  const currentSearchParams = new URLSearchParams(window.location.search);
+  if (
+    currentSearchParams?.has('force') &&
+    currentSearchParams.get('force') === 'true'
+  ) {
+    const urlObj = new URL(url);
+    urlObj.searchParams.set('force', 'true');
+    url = urlObj.toString();
+  }
 
   const request = {
     body,
