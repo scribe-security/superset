@@ -270,7 +270,10 @@ class Dashboard extends React.PureComponent {
     this.refreshCharts([...new Set(affectedChartIds)]);
     this.appliedFilters = activeFilters;
     this.appliedOwnDataCharts = ownDataCharts;
-    SingletonSwitchboard.emit('FiltersApplied', activeFilters);
+    SingletonSwitchboard.emit('FiltersApplied', {
+      dashboardState: this.props?.dashboardState,
+      activeFilters,
+    });
   }
 
   refreshCharts(ids) {
