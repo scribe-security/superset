@@ -278,6 +278,7 @@ class Dashboard extends PureComponent {
     this.appliedOwnDataCharts = ownDataCharts;
 
     SingletonSwitchboard.emit('FiltersApplied', {
+      // @ts-ignore
       // eslint-disable-next-line no-underscore-dangle
       canEmmit: !!window.__canApplyAllFilters__,
       dashboardState: this.props?.dashboardState,
