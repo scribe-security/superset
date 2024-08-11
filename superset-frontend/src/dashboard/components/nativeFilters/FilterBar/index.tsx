@@ -244,6 +244,8 @@ const FilterBar: FC<FiltersBarProps> = ({
         dispatch(updateDataMask(filterId, dataMaskSelected[filterId]));
       }
     });
+    // eslint-disable-next-line no-underscore-dangle
+    window.__canApplyAllFilters__ = true;
   }, [dataMaskSelected, dispatch]);
 
   const handleClearAll = useCallback(() => {
