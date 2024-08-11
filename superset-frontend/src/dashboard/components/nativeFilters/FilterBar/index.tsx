@@ -241,6 +241,7 @@ const FilterBar: React.FC<FiltersBarProps> = ({
         dispatch(updateDataMask(filterId, dataMaskSelected[filterId]));
       }
     });
+    // @ts-ignore
     // eslint-disable-next-line no-underscore-dangle
     window.__canApplyAllFilters__ = true;
   }, [dataMaskSelected, dispatch]);
