@@ -25,6 +25,7 @@ import { useSelector } from 'react-redux';
 import FilterConfigurationLink from 'src/dashboard/components/nativeFilters/FilterBar/FilterConfigurationLink';
 import { useFilters } from 'src/dashboard/components/nativeFilters/FilterBar/state';
 import { RootState } from 'src/dashboard/types';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { getFilterBarTestId } from '../utils';
 import FilterBarSettings from '../FilterBarSettings';
 
@@ -112,7 +113,10 @@ const Header: FC<HeaderProps> = ({ toggleFiltersBar }) => {
           {...getFilterBarTestId('collapse-button')}
           buttonStyle="link"
           buttonSize="xsmall"
-          onClick={() => toggleFiltersBar(false)}
+          onClick={() => {
+            SingletonSwitchboard.emit('toggleFiltersBar', { value: false });
+            toggleFiltersBar(false);
+          }}
         >
           <Icons.Expand iconColor={theme.colors.grayscale.base} />
         </HeaderButton>

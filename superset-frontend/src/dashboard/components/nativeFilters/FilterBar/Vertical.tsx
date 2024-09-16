@@ -34,6 +34,7 @@ import { FeatureFlag, isFeatureEnabled, styled, t } from '@superset-ui/core';
 import Icons from 'src/components/Icons';
 import Loading from 'src/components/Loading';
 import { EmptyStateSmall } from 'src/components/EmptyState';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { getFilterBarTestId } from './utils';
 import { VerticalBarProps } from './types';
 import Header from './Header';
@@ -135,10 +136,10 @@ const VerticalFilterBar: FC<VerticalBarProps> = ({
   const [isScrolling, setIsScrolling] = useState(false);
   const timeout = useRef<any>();
 
-  const openFiltersBar = useCallback(
-    () => toggleFiltersBar(true),
-    [toggleFiltersBar],
-  );
+  const openFiltersBar = useCallback(() => {
+    SingletonSwitchboard.emit('toggleFiltersBar', { value: true });
+    toggleFiltersBar(true);
+  }, [toggleFiltersBar]);
 
   const onScroll = useMemo(
     () =>
