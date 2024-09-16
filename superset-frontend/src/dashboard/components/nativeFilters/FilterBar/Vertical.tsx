@@ -40,6 +40,7 @@ import Icons from 'src/components/Icons';
 import { AntdTabs } from 'src/components';
 import Loading from 'src/components/Loading';
 import { EmptyStateSmall } from 'src/components/EmptyState';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { getFilterBarTestId } from './utils';
 import { TabIds, VerticalBarProps } from './types';
 import FilterSets from './FilterSets';
@@ -166,10 +167,10 @@ const VerticalFilterBar: React.FC<VerticalBarProps> = ({
   const [isScrolling, setIsScrolling] = useState(false);
   const timeout = useRef<any>();
 
-  const openFiltersBar = useCallback(
-    () => toggleFiltersBar(true),
-    [toggleFiltersBar],
-  );
+  const openFiltersBar = useCallback(() => {
+    SingletonSwitchboard.emit('toggleFiltersBar', { value: true });
+    toggleFiltersBar(true);
+  }, [toggleFiltersBar]);
 
   const onScroll = useMemo(
     () =>
