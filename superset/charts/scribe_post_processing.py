@@ -2,13 +2,6 @@ from urllib.parse import parse_qsl
 from bs4 import BeautifulSoup
 from io import StringIO, BytesIO
 import pandas as pd
-import msgpack
-import base64
-
-
-def decode_href(data):
-    decoded = base64.urlsafe_b64decode(data)
-    return msgpack.unpackb(decoded, raw=False)
 
 
 def convert_html_col(html):
@@ -20,10 +13,11 @@ def convert_html_col(html):
         and (soup := BeautifulSoup(html, "html.parser"))
     ):
         val = soup.text
-        if soup.a and (href := soup.a.get("href")):
-            params = dict(parse_qsl(href.split("#", 1)[-1]))
-            if params.get("modal") == "show_params" and (data := params.get("data")):
-                val = decode_href(data)
+        if (div := soup.find("div")):
+            data_info_type = div.get("data-info-type")
+            data_info = div.get("data-info")
+            if data_info_type == "show_params" and data_info is not None:
+                val = data_info
     return val
 
 
