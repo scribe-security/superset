@@ -38,7 +38,7 @@ def apply_scribe_post_process(data, is_csv_format):
         df = pd.read_excel(BytesIO(data))
     df = df.apply(process_col, axis=1)
     if "More" in df:
-        df = pd.concat([df.drop("More", axis=1), pd.json_normalize(df["More"])], axis=1)
+        df = pd.concat([df.drop("More", axis=1), pd.json_normalize(df["More"], max_level=0)], axis=1)
         df = df.loc[:, ~df.columns.duplicated()]
     if is_csv_format:
         buf = StringIO()
