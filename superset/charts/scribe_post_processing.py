@@ -1,4 +1,4 @@
-from urllib.parse import parse_qsl
+import json
 from bs4 import BeautifulSoup
 from io import StringIO, BytesIO
 import pandas as pd
@@ -16,8 +16,11 @@ def convert_html_col(html):
         if (div := soup.find("div")):
             data_info_type = div.get("data-info-type")
             data_info = div.get("data-info")
-            if data_info_type == "show_params" and data_info is not None:
-                val = data_info
+            if (data_info_type == "show_params" or data_info_type == "package_details") and data_info is not None:
+                try:
+                    val = json.loads(data_info)
+                except:
+                    pass
     return val
 
 
