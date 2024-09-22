@@ -75,8 +75,12 @@ const Wrapper = styled.div`
       padding-right: ${theme.gridUnit * 2}px;
     }
   `}
-`;
 
+  /* Additional class styles */
+  &.custom-class {
+    background-color: lightblue; // Example style
+  }
+`;
 type HeaderProps = {
   toggleFiltersBar: (arg0: boolean) => void;
 };

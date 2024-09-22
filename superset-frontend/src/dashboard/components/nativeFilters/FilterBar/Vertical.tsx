@@ -68,7 +68,6 @@ const Bar = styled.div<{ width: number }>`
       margin-top: 0;
       width: 100%;
     }
-    position: absolute;
     top: 0;
     left: 0;
     flex-direction: column;
@@ -78,6 +77,9 @@ const Bar = styled.div<{ width: number }>`
     border-right: 1px solid ${theme.colors.grayscale.light2};
     border-bottom: 1px solid ${theme.colors.grayscale.light2};
     min-height: 100%;
+    border-radius: 6px;
+    border: solid 1px #d9d9d9;
+    position:fixed;
     display: none;
     &.open {
       display: flex;
@@ -192,7 +194,12 @@ const VerticalFilterBar: React.FC<VerticalBarProps> = ({
   }, [onScroll]);
 
   const tabPaneStyle = useMemo(
-    () => ({ overflow: 'auto', height, overscrollBehavior: 'contain' }),
+    () => ({
+      overflow: 'auto',
+      height,
+      overscrollBehavior: 'contain',
+      marginTop: '78px',
+    }),
     [height],
   );
 
@@ -303,12 +310,12 @@ const VerticalFilterBar: React.FC<VerticalBarProps> = ({
     <FilterBarScrollContext.Provider value={isScrolling}>
       <BarWrapper
         {...getFilterBarTestId()}
-        className={cx({ open: filtersOpen })}
+        className={cx({ open: filtersOpen }, 'BarWrapper')}
         width={width}
       >
         <CollapsedBar
           {...getFilterBarTestId('collapsable')}
-          className={cx({ open: !filtersOpen })}
+          className={cx({ open: !filtersOpen }, 'CollapsedBar')}
           onClick={openFiltersBar}
           offset={offset}
         >
@@ -321,7 +328,7 @@ const VerticalFilterBar: React.FC<VerticalBarProps> = ({
             iconSize="l"
           />
         </CollapsedBar>
-        <Bar className={cx({ open: filtersOpen })} width={width}>
+        <Bar className={cx({ open: filtersOpen }, 'Bar')} width={width}>
           <Header toggleFiltersBar={toggleFiltersBar} />
           {!isInitialized ? (
             <div css={{ height }}>
