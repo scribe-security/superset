@@ -59,30 +59,32 @@ const containerStyle = (theme: SupersetTheme) => css`
 `;
 
 const verticalStyle = (theme: SupersetTheme, width: number) => css`
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   pointer-events: none;
   position: fixed;
   z-index: 100;
+  justify-content: space-between;
 
   // filter bar width minus 1px for border
   width: ${width - 1}px;
-  bottom: 0;
+  top: 60px;
 
   padding: ${theme.gridUnit * 4}px;
   padding-top: ${theme.gridUnit * 6}px;
 
-  background: linear-gradient(
-    ${rgba(theme.colors.grayscale.light5, 0)},
-    ${theme.colors.grayscale.light5} ${theme.opacity.mediumLight}
-  );
+  // background: linear-gradient(
+  //   ${rgba(theme.colors.grayscale.light5, 0)},
+  //   ${theme.colors.grayscale.light5} ${theme.opacity.mediumLight}
+  // );
 
   & > button {
     pointer-events: auto;
+    width: 100%;
   }
 
   & > .filter-apply-button {
-    margin-bottom: ${theme.gridUnit * 3}px;
+    //margin-: ${theme.gridUnit * 3}px;
   }
 `;
 
