@@ -67,6 +67,7 @@ const HeaderButton = styled(Button)`
 
 const Wrapper = styled.div`
   ${({ theme }) => `
+    // eslint-disable-next-line react/jsx-curly-newline
     padding: ${theme.gridUnit * 3}px ${theme.gridUnit * 2}px ${
     theme.gridUnit
   }px;
@@ -75,11 +76,6 @@ const Wrapper = styled.div`
       padding-right: ${theme.gridUnit * 2}px;
     }
   `}
-
-  /* Additional class styles */
-  &.custom-class {
-    background-color: lightblue; // Example style
-  }
 `;
 type HeaderProps = {
   toggleFiltersBar: (arg0: boolean) => void;

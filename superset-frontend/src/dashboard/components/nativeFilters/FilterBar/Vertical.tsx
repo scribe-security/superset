@@ -62,7 +62,9 @@ const BarWrapper = styled.div<{ width: number }>`
 `;
 
 const Bar = styled.div<{ width: number }>`
-  ${({ theme, width }) => `
+  ${
+    // eslint-disable-next-line theme-colors/no-literal-colors
+    ({ theme, width }) => `
     & .ant-typography-edit-content {
       left: 0;
       margin-top: 0;
@@ -84,7 +86,8 @@ const Bar = styled.div<{ width: number }>`
     &.open {
       display: flex;
     }
-  `}
+  `
+  }
 `;
 
 const CollapsedBar = styled.div<{ offset: number }>`
