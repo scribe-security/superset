@@ -135,6 +135,8 @@ export default function Button(props: ButtonProps) {
     svgcolor = colors.primary.light1;
   } else if (buttonStyle === 'secondary') {
     backgroundColor = colors.secondary.base;
+    backgroundColorHover = backgroundColor;
+    backgroundColorActive = backgroundColor;
     color = colors.secondary.light1;
     colorHover = color;
     borderWidth = 1;
