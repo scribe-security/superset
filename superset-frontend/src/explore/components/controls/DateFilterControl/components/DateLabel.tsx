@@ -30,7 +30,7 @@ export type DateLabelProps = {
 
 // This is the color that antd components (such as Select or Input) use on hover
 // TODO: use theme.colors.primary.base here and in antd components
-const ACTIVE_BORDER_COLOR = '#45BED6';
+const ACTIVE_BORDER_COLOR = '#3e76d0';
 
 const LabelContainer = styled.div<{
   isActive?: boolean;

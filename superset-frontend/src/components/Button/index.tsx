@@ -80,9 +80,9 @@ export default function Button(props: ButtonProps) {
     padding = 10;
   }
 
-  let backgroundColor = primary.light4;
-  let backgroundColorHover = mix(0.1, primary.base, primary.light4);
-  let backgroundColorActive = mix(0.25, primary.base, primary.light4);
+  let backgroundColor = primary.light5;
+  let backgroundColorHover = mix(0.1, primary.base, primary.light5);
+  let backgroundColorActive = mix(0.25, primary.base, primary.light5);
   let backgroundColorDisabled = grayscale.light2;
   let color = primary.dark1;
   let colorHover = color;
@@ -91,6 +91,7 @@ export default function Button(props: ButtonProps) {
   let borderColor = 'transparent';
   let borderColorHover = 'transparent';
   let borderColorDisabled = 'transparent';
+  let svgcolor = 'white';
 
   if (buttonStyle === 'primary') {
     backgroundColor = primary.base;
@@ -131,6 +132,16 @@ export default function Button(props: ButtonProps) {
     backgroundColorHover = 'transparent';
     backgroundColorActive = 'transparent';
     colorHover = primary.base;
+    svgcolor = colors.primary.light1;
+  } else if (buttonStyle === 'secondary') {
+    backgroundColor = colors.secondary.base;
+    color = colors.secondary.light1;
+    colorHover = color;
+    borderWidth = 1;
+    borderStyle = 'solid';
+    borderColor = primary.base;
+    borderColorHover = primary.light1;
+    svgcolor = colors.primary.light1;
   }
 
   const element = children as ReactElement;
@@ -157,7 +168,7 @@ export default function Button(props: ButtonProps) {
         fontSize: typography.sizes.s,
         fontWeight: typography.weights.bold,
         height,
-        textTransform: 'uppercase',
+        textTransform: 'capitalize',
         padding: `0px ${padding}px`,
         transition: `all ${transitionTiming}s`,
         minWidth: cta ? theme.gridUnit * 36 : undefined,
@@ -197,6 +208,9 @@ export default function Button(props: ButtonProps) {
         },
         '& > :first-of-type': {
           marginRight: firstChildMargin,
+        },
+        '& svg': {
+          color: `${svgcolor}!important`,
         },
       }}
       {...restProps}
