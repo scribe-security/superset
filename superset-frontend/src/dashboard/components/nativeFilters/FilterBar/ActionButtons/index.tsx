@@ -43,17 +43,9 @@ interface ActionButtonsProps {
 
 const containerStyle = (theme: SupersetTheme) => css`
   display: flex;
-
   && > .filter-clear-all-button {
-    color: ${theme.colors.grayscale.base};
     margin-left: 0;
     &:hover {
-      color: ${theme.colors.primary.dark1};
-    }
-
-    &[disabled],
-    &[disabled]:hover {
-      color: ${theme.colors.grayscale.light1};
     }
   }
 `;
@@ -91,8 +83,10 @@ const verticalStyle = (theme: SupersetTheme, width: number) => css`
 const horizontalStyle = (theme: SupersetTheme) => css`
   align-items: center;
   margin-left: auto;
+  text-transform: capitalize;
   && > .filter-clear-all-button {
-    text-transform: capitalize;
+    background-color: ${theme.colors.grayscale.light4};
+    border: 1px solid ${theme.colors.grayscale.base};
     font-weight: ${theme.typography.weights.normal};
   }
   & > .filter-apply-button {
@@ -100,6 +94,7 @@ const horizontalStyle = (theme: SupersetTheme) => css`
     &[disabled]:hover {
       color: ${theme.colors.grayscale.light1};
       background: ${theme.colors.grayscale.light3};
+      border: 1px solid ${theme.colors.grayscale.light1};
     }
   }
 `;
@@ -137,6 +132,7 @@ const ActionButtons = ({
         disabled={isApplyDisabled}
         buttonStyle="primary"
         htmlType="submit"
+        buttonSize="small"
         className="filter-apply-button"
         onClick={onApply}
         {...getFilterBarTestId('apply-button')}
@@ -145,7 +141,7 @@ const ActionButtons = ({
       </Button>
       <Button
         disabled={!isClearAllEnabled}
-        buttonStyle="link"
+        buttonStyle="secondary"
         buttonSize="small"
         className="filter-clear-all-button"
         onClick={onClearAll}
