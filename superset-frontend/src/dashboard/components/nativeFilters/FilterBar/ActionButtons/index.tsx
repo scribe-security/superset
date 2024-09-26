@@ -44,7 +44,7 @@ interface ActionButtonsProps {
 const containerStyle = (theme: SupersetTheme) => css`
   display: flex;
   && > .filter-clear-all-button {
-    margin-left: 0;
+    margin-left: 10px;
     &:hover {
     }
   }
