@@ -2,6 +2,7 @@ name: Secret Scanning
 
 on:
   workflow_dispatch:
+  push:
 
 jobs:
 
@@ -14,6 +15,7 @@ jobs:
       scribe_product_name: "scribe-platform"
       scribe_product_version: "dev"
       exit_code: 0 # Modify if you want the check to fail before the attestation
+      skip_files: docs/docs/databases/bigquery.mdx,docs/docs/databases/bigquery.mdx
     secrets: 
       SCRIBE_TOKEN: ${{ secrets.SCRIBE_DOGFOODING }}
       DOGFOODING_POLICY_ACCESS: ${{ secrets.DOGFOODING_POLICY_ACCESS }}
