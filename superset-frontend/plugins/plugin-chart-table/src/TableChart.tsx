@@ -67,6 +67,8 @@ import {
   DataColumnMeta,
   TableChartTransformedProps,
 } from './types';
+import SingletonSwitchboard from '@superset-ui/switchboard';
+
 import DataTable, {
   DataTableProps,
   SearchInputProps,
@@ -725,7 +727,12 @@ export default function TableChart<D extends DataRecord = DataRecord>(
       if (emitCrossFilters && !isMetric) {
         className += ' dt-is-filter';
       }
-
+      type CellClicked = {
+        columnKey: string;
+        rowIndex: number;
+        cellData: DataRecordValue;
+        isAnchor: boolean;
+      };
       if (!isMetric && !isPercentMetric) {
         className += ' right-border-only';
       } else if (comparisonLabels.includes(label)) {
@@ -733,6 +740,33 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         const columnsUnderHeader = groupHeaderColumns[groupinHeader] || [];
         if (i === columnsUnderHeader[columnsUnderHeader.length - 1]) {
           className += ' right-border-only';
+        }
+      }
+
+      const cellClicked = (
+        column: DataColumnMeta,
+        row: Row<D>,
+        value: DataRecordValue,
+      ) => {
+        let isAnchor = false;
+        let parsedValue = value;
+        if (typeof value === 'string') {
+          const parsed = new DOMParser().parseFromString(value, 'text/html');
+          const element = parsed.body.firstChild as HTMLElement;
+          if (
+            element?.tagName === 'A' &&
+            element.getAttribute('href') === '#'
+          ) {
+            const data = element.getAttribute('data');
+            if (data) {
+              try {
+                parsedValue = JSON.parse(data);
+                isAnchor = true;
+              } catch (error) {
+                parsedValue = value;
+              }
+            }
+          }
         }
         const msg: CellClicked = {
           columnKey: column.key,
@@ -850,15 +884,18 @@ export default function TableChart<D extends DataRecord = DataRecord>(
             role: 'cell',
             // show raw number in title in case of numeric values
             title: typeof value === 'number' ? String(value) : undefined,
-            onClick:
-              emitCrossFilters && !valueRange && !isMetric
-                ? () => {
-                    // allow selecting text in a cell
-                    if (!getSelectedText()) {
-                      toggleFilter(key, value);
-                    }
-                  }
-                : undefined,
+            onClick: () => {
+              cellClicked(column, row, value);
+              // allow selecting text in a cell
+              if (
+                emitCrossFilters &&
+                !valueRange &&
+                !isMetric &&
+                !getSelectedText()
+              ) {
+                toggleFilter(key, value);
+              }
+            },
             onContextMenu: (e: MouseEvent) => {
               if (handleContextMenu) {
                 e.preventDefault();
@@ -885,7 +922,12 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 <StyledCell {...cellProps}>
                   <div
                     className="dt-truncate-cell"
-                    style={columnWidth ? { width: columnWidth } : undefined}
+                    style={{
+                      textOverflow: 'ellipsis',
+                      ...(columnWidth
+                        ? { width: `${columnWidth}vw` }
+                        : undefined),
+                    }}
                     dangerouslySetInnerHTML={html}
                   />
                 </StyledCell>
@@ -912,10 +954,34 @@ export default function TableChart<D extends DataRecord = DataRecord>(
               {truncateLongCells ? (
                 <div
                   className="dt-truncate-cell"
-                  style={columnWidth ? { width: columnWidth } : undefined}
+                  style={{
+                    textOverflow: 'ellipsis',
+                    ...(columnWidth
+                      ? { width: `${columnWidth}vw` }
+                      : undefined),
+                  }}
                 >
                   {arrow && <span css={arrowStyles}>{arrow}</span>}
-                  {text}
+                  <Tooltip
+                    overlayInnerStyle={{
+                      borderRadius: '5px',
+                      padding: '15px',
+                    }}
+                    color="#214887"
+                    placement="top"
+                    title={text}
+                  >
+                    <div
+                      style={{
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        display: 'inline-block',
+                        width: 'inherit',
+                      }}
+                    >
+                      {text}
+                    </div>
+                  </Tooltip>
                 </div>
               ) : (
                 <>
@@ -958,7 +1024,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
               // column width hint
               <div
                 style={{
-                  width: columnWidth,
+                  width: `${columnWidth}vw`,
                   height: 0.01,
                 }}
               />

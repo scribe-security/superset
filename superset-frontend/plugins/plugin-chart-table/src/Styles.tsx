@@ -88,11 +88,11 @@ export default styled.div`
       white-space: nowrap;
       width: inherit;
     }
-    .dt-truncate-cell:hover {
-      overflow: visible;
-      white-space: normal;
-      height: auto;
-    }
+    //.dt-truncate-cell:hover {
+    //  overflow: visible;
+    //  white-space: normal;
+    //  height: auto;
+    //}
 
     .dt-pagination {
       text-align: right;
