@@ -68,6 +68,7 @@ import {
   DataColumnMeta,
   TableChartTransformedProps,
 } from './types';
+import Tooltip from 'antd/lib/tooltip';
 
 import DataTable, {
   DataTableProps,
@@ -702,7 +703,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           ? defaultColorPN
           : config.colorPositiveNegative;
 
-      const {truncateLongCells} = config;
+      const { truncateLongCells } = config;
 
       const hasColumnColorFormatters =
         isNumeric &&
@@ -727,6 +728,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
       if (emitCrossFilters && !isMetric) {
         className += ' dt-is-filter';
       }
+
       type CellClicked = {
         columnKey: string;
         rowIndex: number;
@@ -830,6 +832,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
             text-align: ${sharedStyle.textAlign};
             white-space: ${value instanceof Date ? 'nowrap' : undefined};
             position: relative;
+            vertical-align: middle !important;
             background: ${backgroundColor || undefined};
           `;
 
