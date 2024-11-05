@@ -87,11 +87,11 @@ export default styled.div`
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .dt-truncate-cell:hover {
-      overflow: visible;
-      white-space: normal;
-      height: auto;
-    }
+    //.dt-truncate-cell:hover {
+    //  overflow: visible;
+    //  white-space: normal;
+    //  height: auto;
+    //}
 
     .dt-pagination {
       text-align: right;

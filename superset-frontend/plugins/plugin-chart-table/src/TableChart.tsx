@@ -50,6 +50,7 @@ import {
 } from '@superset-ui/core';
 
 import SingletonSwitchboard from '@superset-ui/switchboard';
+import { Tooltip } from 'antd';
 import { DataColumnMeta, TableChartTransformedProps } from './types';
 import DataTable, {
   DataTableProps,
@@ -586,7 +587,12 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 <StyledCell {...cellProps}>
                   <div
                     className="dt-truncate-cell"
-                    style={columnWidth ? { width: columnWidth } : undefined}
+                    style={{
+                      textOverflow: 'ellipsis',
+                      ...(columnWidth
+                        ? { width: `${columnWidth}vw` }
+                        : undefined),
+                    }}
                     dangerouslySetInnerHTML={html}
                   />
                 </StyledCell>
@@ -612,9 +618,33 @@ export default function TableChart<D extends DataRecord = DataRecord>(
               {truncateLongCells ? (
                 <div
                   className="dt-truncate-cell"
-                  style={columnWidth ? { width: columnWidth } : undefined}
+                  style={{
+                    textOverflow: 'ellipsis',
+                    ...(columnWidth
+                      ? { width: `${columnWidth}vw` }
+                      : undefined),
+                  }}
                 >
-                  {text}
+                  <Tooltip
+                    overlayInnerStyle={{
+                      borderRadius: '5px',
+                      padding: '15px',
+                    }}
+                    color="#214887"
+                    placement="top"
+                    title={text}
+                  >
+                    <div
+                      style={{
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        display: 'inline-block',
+                        width: 'inherit',
+                      }}
+                    >
+                      {text}
+                    </div>
+                  </Tooltip>
                 </div>
               ) : (
                 text
@@ -652,7 +682,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
               // column width hint
               <div
                 style={{
-                  width: columnWidth,
+                  width: `${columnWidth}vw`,
                   height: 0.01,
                 }}
               />
