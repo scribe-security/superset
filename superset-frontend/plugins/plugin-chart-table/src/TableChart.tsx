@@ -49,8 +49,10 @@ import {
   tn,
 } from '@superset-ui/core';
 
+// @ts-ignore
 import SingletonSwitchboard from '@superset-ui/switchboard';
-import { Tooltip } from 'antd';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import Tooltip from 'antd/lib/tooltip';
 import { DataColumnMeta, TableChartTransformedProps } from './types';
 import DataTable, {
   DataTableProps,
