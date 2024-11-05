@@ -533,6 +533,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
             text-align: ${sharedStyle.textAlign};
             white-space: ${value instanceof Date ? 'nowrap' : undefined};
             position: relative;
+            vertical-align: middle !important;
             background: ${backgroundColor || undefined};
           `;
 
@@ -618,35 +619,28 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 />
               )}
               {truncateLongCells ? (
-                <div
-                  className="dt-truncate-cell"
-                  style={{
-                    textOverflow: 'ellipsis',
-                    ...(columnWidth
-                      ? { width: `${columnWidth}vw` }
-                      : undefined),
+                <Tooltip
+                  overlayInnerStyle={{
+                    borderRadius: '5px',
+                    padding: '10px',
                   }}
+                  color="#214887"
+                  placement="top"
+                  title={text}
+                  className="dt-truncate-cell"
                 >
-                  <Tooltip
-                    overlayInnerStyle={{
-                      borderRadius: '5px',
-                      padding: '15px',
+                  <div
+                    style={{
+                      textOverflow: 'ellipsis',
+                      display: 'inline-block',
+                      ...(columnWidth
+                        ? { width: `${columnWidth}vw` }
+                        : undefined),
                     }}
-                    color="#214887"
-                    placement="top"
-                    title={text}
                   >
-                    <div
-                      style={{
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden',
-                        display: 'inline-block',
-                      }}
-                    >
-                      {text}
-                    </div>
-                  </Tooltip>
-                </div>
+                    {text}
+                  </div>
+                </Tooltip>
               ) : (
                 text
               )}
