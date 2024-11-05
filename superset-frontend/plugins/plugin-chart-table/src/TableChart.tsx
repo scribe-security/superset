@@ -641,7 +641,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                         textOverflow: 'ellipsis',
                         overflow: 'hidden',
                         display: 'inline-block',
-                        width: 'inherit',
                       }}
                     >
                       {text}
