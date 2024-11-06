@@ -979,6 +979,10 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                         textOverflow: 'ellipsis',
                         overflow: 'hidden',
                         display: 'inline-block',
+                        maxWidth: '-webkit-fill-available',
+                        ...(columnWidth
+                          ? { width: `${columnWidth}vw` }
+                          : undefined),
                       }}
                     >
                       {text}
