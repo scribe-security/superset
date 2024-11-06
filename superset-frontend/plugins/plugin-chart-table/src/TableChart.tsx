@@ -619,7 +619,13 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 />
               )}
               {truncateLongCells ? (
-                <div>
+                <div
+                  style={{
+                    ...(columnWidth
+                      ? { width: `${columnWidth}vw` }
+                      : undefined),
+                  }}
+                >
                   <Tooltip
                     overlayInnerStyle={{
                       borderRadius: '5px',
@@ -635,9 +641,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                         textOverflow: 'ellipsis',
                         display: 'inline-block',
                         maxWidth: '-webkit-fill-available',
-                        ...(columnWidth
-                          ? { width: `${columnWidth}vw` }
-                          : undefined),
                       }}
                     >
                       {text}
