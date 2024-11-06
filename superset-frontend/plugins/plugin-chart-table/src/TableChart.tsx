@@ -619,28 +619,31 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 />
               )}
               {truncateLongCells ? (
-                <Tooltip
-                  overlayInnerStyle={{
-                    borderRadius: '5px',
-                    padding: '10px',
-                  }}
-                  color="#214887"
-                  placement="top"
-                  title={text}
-                  className="dt-truncate-cell"
-                >
-                  <div
-                    style={{
-                      textOverflow: 'ellipsis',
-                      display: 'inline-block',
-                      ...(columnWidth
-                        ? { width: `${columnWidth}vw` }
-                        : undefined),
+                <div>
+                  <Tooltip
+                    overlayInnerStyle={{
+                      borderRadius: '5px',
+                      padding: '10px',
                     }}
+                    color="#214887"
+                    placement="top"
+                    title={text}
+                    className="dt-truncate-cell"
                   >
-                    {text}
-                  </div>
-                </Tooltip>
+                    <div
+                      style={{
+                        textOverflow: 'ellipsis',
+                        display: 'inline-block',
+                        maxWidth: '-webkit-fill-available',
+                        ...(columnWidth
+                          ? { width: `${columnWidth}vw` }
+                          : undefined),
+                      }}
+                    >
+                      {text}
+                    </div>
+                  </Tooltip>
+                </div>
               ) : (
                 text
               )}
