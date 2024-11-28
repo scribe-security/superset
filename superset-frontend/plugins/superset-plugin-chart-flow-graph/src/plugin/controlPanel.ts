@@ -280,9 +280,9 @@ const config: ControlPanelConfig = {
             name: 'tooltipCol',
             config: {
               ...sharedControls.series,
-              label: t('Tooltip Column'),
+              label: t('Hover-on Column'),
               description: t(
-                'Column to use for displaying text in node tooltip (tooltips are able to render html)',
+                'Column to use for displaying text in node Hover-on (Hover-ons are able to render html)',
               ),
             },
           },
@@ -428,7 +428,7 @@ const config: ControlPanelConfig = {
       ],
     },
     {
-      label: t('Tooltip Controls'),
+      label: t('Hover-on Controls'),
       expanded: true,
       controlSetRows: [
         [
@@ -436,10 +436,10 @@ const config: ControlPanelConfig = {
             name: 'ttOffsetX',
             config: {
               type: 'TextControl',
-              label: t('Tooltip Position Offset X'),
+              label: t('Hover-on Position Offset X'),
               default: '-100',
               description: t(
-                'The x-coordinate offset of the tooltip from the default position',
+                'The x-coordinate offset of the Hover-on from the default position',
               ),
               renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
@@ -449,10 +449,10 @@ const config: ControlPanelConfig = {
             name: 'ttOffsetY',
             config: {
               type: 'TextControl',
-              label: t('Tooltip Position Offset Y'),
+              label: t('Hover-on Position Offset Y'),
               default: '25',
               description: t(
-                'The y-coordinate offset of the tooltip from the default position',
+                'The y-coordinate offset of the Hover-on from the default position',
               ),
               renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
@@ -464,20 +464,20 @@ const config: ControlPanelConfig = {
             name: 'ttBackgroundColor',
             config: {
               type: t('ColorPickerControl'),
-              label: t('Tooltip Color'),
+              label: t('Hover-on Color'),
               renderTrigger: true,
               default: DEFAULT_TOOLTIP_BG_COLOR,
-              description: t('The color of the tooltip'),
+              description: t('The color of the Hover-on'),
             },
           },
           {
             name: 'ttTextColor',
             config: {
               type: t('ColorPickerControl'),
-              label: t('Tooltip Text Color'),
+              label: t('Hover-on Text Color'),
               renderTrigger: true,
               default: DEFAULT_TOOLTIP_TEXT_COLOR,
-              description: t('The color of the text in the tooltip'),
+              description: t('The color of the text in the Hover-on'),
             },
           },
         ],
@@ -490,7 +490,7 @@ const config: ControlPanelConfig = {
               renderTrigger: true,
               default: true,
               description: t(
-                'Automatically convert links in the tooltip text into actual html links',
+                'Automatically convert links in the Hover-on text into actual html links',
               ),
             },
           },

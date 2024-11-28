@@ -70,7 +70,7 @@ export default function SupersetPluginChartFlowGraph(
   //   console.log('Plugin element', root);
   // });
 
-  // console.log('Plugin props', props);
+  console.log('Plugin props', props);
 
   return (
     <Styles ref={rootElem} height={height} width={width}>
