@@ -36,12 +36,9 @@ const useLayoutedElements = () => {
     'elk.algorithm': 'layered',
     'elk.layered.spacing.nodeNodeBetweenLayers': 80,
     'elk.spacing.nodeNode': 80,
-    // "elk.separateConnectedComponents": false,
     'elk.spacing.componentComponent': 80,
     'elk.partitioning.activate': true,
     'elk.separateConnectedComponents': false,
-    // 'elk.interactiveLayout': true,
-    // 'elk.layered.generatePositionAndLayerIds': true,
   };
   const getLayoutedElements = useCallback(
     (
@@ -69,25 +66,9 @@ const useLayoutedElements = () => {
       };
 
       elk.layout(graph).then(({ children }) => {
-        // By mutating the children in-place we saves ourselves from creating a
-        // needless copy of the nodes array.
-        // const nextNodes = elkToFlow(children);
         if (children) {
-          // children.forEach((node: any) => {
-          //   // node.position = { x: node.x, y: node.y };
-          //   // node.style = { width: node.width, height: node.height };
-          //   delete node.width;
-          //   delete node.height;
-          // });
-
           setNodes(children as Node[]);
         }
-
-        // setNodes(nextNodes)
-
-        // window.requestAnimationFrame(() => {
-        //   fitView();
-        // });
       });
     },
     [],
@@ -112,12 +93,9 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
   const { getLayoutedElements } = useLayoutedElements();
 
   useEffect(() => {
-    /** On initial render (and when certain settings require rebuilding tree),
-     * build tree from data, use tree to make nodes/edges, and pass through ELK
-     */
     if (chart) {
-      chart?.resize();
-      chart?.dispatchAction({ type: 'restore' });
+      chart.resize();
+      chart.dispatchAction({ type: 'restore' });
     }
 
     let { tree } = buildTree(
@@ -138,7 +116,6 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
         'elk.layered.spacing.nodeNodeBetweenLayers':
           props.nodeNodeBetweenLayers,
         'elk.spacing.nodeNode': props.nodeNode,
-        // "elk.separateConnectedComponents": false,
         'elk.spacing.componentComponent': props.componentComponent,
       },
       nodes,
@@ -187,7 +164,6 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
   ]);
 
   useEffect(() => {
-    /** When node is clicked, expand or collapse subgraphs */
     if (clickedNode) {
       const res = nodeClick(legendTree, nodes, edges, clickedNode.nodeId);
       if (
@@ -205,14 +181,12 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
             if (oldNode) return { ...n, x: oldNode.x, y: oldNode.y };
             return n;
           });
-          // clickedNode.chart.dispatchAction({ type: 'restore' });
           getLayoutedElements(
             {
               'elk.algorithm': 'layered',
               'elk.layered.spacing.nodeNodeBetweenLayers':
                 props.nodeNodeBetweenLayers,
               'elk.spacing.nodeNode': props.nodeNode,
-              // "elk.separateConnectedComponents": false,
               'elk.layered.crossingMinimization.forceNodeModelOrder': true,
               'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
               'elk.spacing.componentComponent': props.componentComponent,
@@ -251,7 +225,6 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
           'elk.layered.spacing.nodeNodeBetweenLayers':
             props.nodeNodeBetweenLayers,
           'elk.spacing.nodeNode': props.nodeNode,
-          // "elk.separateConnectedComponents": false,
           'elk.layered.crossingMinimization.forceNodeModelOrder': true,
           'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
           'elk.spacing.componentComponent': props.componentComponent,
@@ -265,11 +238,26 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     }
   }, [selectedTypes]);
 
-  /** Master ECharts configuration option object */
+  let clickTimeout: NodeJS.Timeout | null = null;
+
+  const handleDoubleClick = (info: ECElementEvent, chart: ECharts) => {
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      clickTimeout = null;
+
+      console.log('DOUBLE CLICK DETECTED!');
+      setClickedNode({ nodeId: (info.data as Node)?.id, chart });
+    } else {
+      clickTimeout = setTimeout(() => {
+        console.log('Waiting for double click...');
+        clickTimeout = null;
+      }, 300); // 300ms delay to detect double click
+    }
+  };
+
   const option: EChartsOption = {
     tooltip: { enterable: true },
     animationDurationUpdate: 1500,
-    // animationEasingUpdate: "quinticInOut",
     legend,
     series: [
       {
@@ -288,9 +276,6 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
             },
           },
         },
-        // emphasis: {
-        //   focus: 'adjacency',
-        // },
         categories: tree
           .map(n => n.typeValue)
           .filter((val, idx, arr) => arr.indexOf(val) === idx)
@@ -299,10 +284,10 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
         edgeSymbolSize: [props.edgeSizeStart, props.edgeSizeEnd],
         nodeScaleRatio: props.nodeScaleRatio as 0.6,
         draggable: props.draggableNodes,
-        data: nodes, // .map((n: any) => ({ ...n, symbolSize: n.width })),
-        links: edges.map((e: any) => {
-          const s = nodes.findIndex((n: Node) => n.id === e.source);
-          const t = nodes.findIndex((n: Node) => n.id === e.target);
+        data: nodes,
+        links: edges.map(e => {
+          const s = nodes.findIndex(n => n.id === e.source);
+          const t = nodes.findIndex(n => n.id === e.target);
           return {
             source: s,
             target: t,
@@ -334,25 +319,20 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
             return point;
           },
         },
-        center: undefined,
       },
     ],
   };
 
   return (
-    <>
-      <EChartsRenderer
-        option={option}
-        onNodeClick={(info: ECElementEvent, chart: ECharts) => {
-          setClickedNode({ nodeId: (info.data as Node)?.id, chart });
-        }}
-        onLegendClick={(info: any, chart: ECharts) => {
-          setSelectedTypes(info.selected);
-        }}
-        setChart={setChart}
-        settings={{ lazyUpdate: true }}
-      />
-    </>
+    <EChartsRenderer
+      option={option}
+      onNodeClick={handleDoubleClick}
+      onLegendClick={(info: any, chart: ECharts) => {
+        setSelectedTypes(info.selected);
+      }}
+      setChart={setChart}
+      settings={{ lazyUpdate: true }}
+    />
   );
 };
 
