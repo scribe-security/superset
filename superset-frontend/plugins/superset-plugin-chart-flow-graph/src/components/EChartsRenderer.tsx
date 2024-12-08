@@ -5,6 +5,7 @@ import {
   getInstanceByDom,
   init,
   SetOptionOpts,
+  LegendComponentOption,
 } from 'echarts';
 import React, { CSSProperties, useEffect, useRef } from 'react';
 
@@ -54,24 +55,17 @@ const EChartsRenderer = ({
   }, [theme]);
 
   useEffect(() => {
-    // Add node click handler
     if (chartRef.current) {
       const chart = getInstanceByDom(chartRef.current);
       chart?.off('click');
       chart?.off('legendselectchanged');
-      // chart?.off('graphroam');
-      // chart?.on("click", { dataType: "node" }, () => {
-      //   setTimeout(() => {
-      //     console.log("restore on zoom");
-      //     chart?.dispatchAction({ type: "restore" });
-      //   }, 2000);
-      //   // chart?.dispatchAction({ type: "restore" });
-      // });
+
       chart?.on('click', { dataType: 'node' }, info => {
         if (chart && onNodeClick) {
           onNodeClick(info, chart);
         }
       });
+
       chart?.on('legendselectchanged', info => {
         if (chart && onLegendClick) {
           onLegendClick(info, chart);
@@ -81,23 +75,50 @@ const EChartsRenderer = ({
   }, [chartRef.current]);
 
   useEffect(() => {
-    // Update chart
     if (chartRef.current !== null) {
       const chart = getInstanceByDom(chartRef.current);
+
+      const legends = Array.isArray(option.legend) ? option.legend : [option.legend];
+      legends.forEach(l => {
+        const legend = l as LegendComponentOption;
+        if (legend && !Array.isArray(legend)) {
+          if (!legend.textStyle) legend.textStyle = {};
+          if (!legend.textStyle.rich) legend.textStyle.rich = {};
+          const legendRichText = legend.textStyle.rich;
+
+          // If no formatter is defined, create a default one
+          if (!legend.formatter) {
+            legend.formatter = (name: string) => {
+              if (legendRichText[name] && legendRichText[name].color) {
+                return `{colorBox|} {${name}|${name}}`;
+              }
+              return name;
+            };
+          }
+
+          if (!legendRichText.colorBox) {
+            legendRichText.colorBox = {
+              backgroundColor: '#000',
+              width: 10,
+              height: 10,
+              borderRadius: 2,
+              align: 'center',
+            };
+          }
+        }
+      });
+
       chart?.setOption(option, settings);
       setChart(chart);
     }
   }, [option, settings, theme]);
 
   useEffect(() => {
-    // Update chart
     if (chartRef.current !== null) {
       const chart = getInstanceByDom(chartRef.current);
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions,no-unused-expressions
       loading === true ? chart?.showLoading() : chart?.hideLoading();
       setChart(chart);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, theme]);
 
   return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;

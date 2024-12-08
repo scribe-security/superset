@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
@@ -12,6 +13,7 @@ import {
   ECElementEvent,
   ECharts,
   LegendComponentOption,
+  TextCommonOption,
 } from 'echarts';
 import {
   buildCollapseNodes,
@@ -29,7 +31,6 @@ import {
   SupersetPluginChartFlowGraphProps,
 } from '../types';
 
-// ELK layout logic
 const elk = new ELK();
 const useLayoutedElements = () => {
   const defaultOptions = {
@@ -86,11 +87,11 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     nodeId: string;
     chart: ECharts;
   }>();
-  const [selectedTypes, setSelectedTypes] =
-    useState<{ [key: string]: boolean }>();
+  const [selectedTypes, setSelectedTypes] = useState<{ [key: string]: boolean }>();
   const [chart, setChart] = useState<ECharts>();
 
   const { getLayoutedElements } = useLayoutedElements();
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (chart) {
@@ -108,37 +109,63 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     );
     tree = filterZeros(tree);
 
-    const { nodes, edges } = buildCollapseNodes(tree);
+    const { nodes: initialNodes, edges: initialEdges } = buildCollapseNodes(tree);
 
     getLayoutedElements(
       {
         'elk.algorithm': 'layered',
-        'elk.layered.spacing.nodeNodeBetweenLayers':
-          props.nodeNodeBetweenLayers,
+        'elk.layered.spacing.nodeNodeBetweenLayers': props.nodeNodeBetweenLayers,
         'elk.spacing.nodeNode': props.nodeNode,
         'elk.spacing.componentComponent': props.componentComponent,
       },
-      nodes,
-      edges,
+      initialNodes,
+      initialEdges,
       setNodes,
       { width: props.nodeSizeW, height: props.nodeSizeH },
     );
+
     setTree(tree);
     setLegendTree(tree);
-    setEdges(edges);
+    setEdges(initialEdges);
   }, [
     props.data,
     props.typeMapping,
     props.edgeColors,
     props.overflowText,
     props.ttAutoLink,
+    getLayoutedElements,
+    chart,
+    props.nodeNodeBetweenLayers,
+    props.nodeNode,
+    props.componentComponent,
+    props.nodeSizeW,
+    props.nodeSizeH,
   ]);
 
+  // Build a richer legend with the new code's approach
   const legend = useMemo(() => {
+    const uniqueTypesWithColors: Record<string, string> = tree.reduce((acc, item) => {
+      if (item.typeValue && !acc[item.typeValue]) {
+        acc[item.typeValue] = item.color as string;
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
+    const legendRichText: Record<string, TextCommonOption> = Object.fromEntries(
+      Object.entries(uniqueTypesWithColors).map(([name]) => [
+        name,
+        { color: '#000000' },
+      ])
+    );
+
     const l: LegendComponentOption = {
       show: props.showLegend,
       type: props.legendType,
       [props.legendOrientation]: 0,
+      textStyle: {
+        rich: legendRichText,
+      },
+      formatter: (name) => `${name}`,
     };
 
     if (props.legendOrientation === 'top') {
@@ -161,8 +188,10 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     props.legendMargin,
     props.legendOrientation,
     props.legendType,
+    tree,
   ]);
 
+  // Handle node expansion on double-click (from old code)
   useEffect(() => {
     if (clickedNode) {
       const res = nodeClick(legendTree, nodes, edges, clickedNode.nodeId);
@@ -204,8 +233,21 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
         setLegendTree(res.tree);
       }
     }
-  }, [clickedNode]);
+  }, [
+    clickedNode,
+    legendTree,
+    nodes,
+    edges,
+    props.autoLayout,
+    props.nodeNodeBetweenLayers,
+    props.nodeNode,
+    props.componentComponent,
+    props.nodeSizeW,
+    props.nodeSizeH,
+    getLayoutedElements,
+  ]);
 
+  // Handle filtering by selected types (from old code)
   useEffect(() => {
     if (selectedTypes) {
       const newTree = filterZeros(
@@ -236,27 +278,53 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
       );
       setEdges(newEdges);
     }
-  }, [selectedTypes]);
+  }, [
+    selectedTypes,
+    tree,
+    getLayoutedElements,
+    props.nodeNodeBetweenLayers,
+    props.nodeNode,
+    props.componentComponent,
+    props.nodeSizeW,
+    props.nodeSizeH,
+  ]);
 
-  let clickTimeout: NodeJS.Timeout | null = null;
-
+  // Double-click logic (from old code)
   const handleDoubleClick = (info: ECElementEvent, chart: ECharts) => {
-    if (clickTimeout) {
-      clearTimeout(clickTimeout);
-      clickTimeout = null;
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
 
-      console.log('DOUBLE CLICK DETECTED!');
+      // Double click detected
       setClickedNode({ nodeId: (info.data as Node)?.id, chart });
     } else {
-      clickTimeout = setTimeout(() => {
-        console.log('Waiting for double click...');
-        clickTimeout = null;
-      }, 300); // 300ms delay to detect double click
+      // First click
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        // Single click passed without second click
+      }, 300);
     }
   };
 
   const option: EChartsOption = {
-    tooltip: { enterable: true },
+    tooltip: {
+      enterable: true,
+      show: false, // from old code (adjust if you want tooltips visible)
+      textStyle: { color: props.ttTextColor },
+      backgroundColor: props.ttBackgroundColor,
+      position(point, params, dom, rect, size) {
+        if (chart && params.data && (params as any).data.x && (params as any).data.y) {
+          const coords = chart.convertToPixel({ seriesId: 'graph' }, [
+            (params as any).data.x,
+            (params as any).data.y,
+          ]);
+          if (coords) {
+            return [coords[0] + props.ttOffsetX, coords[1] + props.ttOffsetY];
+          }
+        }
+        return point;
+      },
+    },
     animationDurationUpdate: 1500,
     legend,
     series: [
@@ -276,15 +344,15 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
             },
           },
         },
-        categories: tree
-          .map(n => n.typeValue)
-          .filter((val, idx, arr) => arr.indexOf(val) === idx)
-          .map(n => ({ name: n })),
+        categories: tree.map(n => ({ name: n.typeValue, itemStyle: { color: n.color } })),
         edgeSymbol: [props.edgeSymbolStart, props.edgeSymbolEnd],
         edgeSymbolSize: [props.edgeSizeStart, props.edgeSizeEnd],
         nodeScaleRatio: props.nodeScaleRatio as 0.6,
-        draggable: props.draggableNodes,
-        data: nodes,
+        draggable: props.draggableNodes, // from old code to allow dragging
+        data: nodes.map(node => ({
+          ...node,
+          itemStyle: { color: tree.find(t => t.id === node.id)?.color },
+        })),
         links: edges.map(e => {
           const s = nodes.findIndex(n => n.id === e.source);
           const t = nodes.findIndex(n => n.id === e.target);
@@ -304,21 +372,6 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
           show: true,
           formatter: '{c}',
         },
-        tooltip: {
-          show: false,
-          textStyle: { color: props.ttTextColor },
-          backgroundColor: props.ttBackgroundColor,
-          position(point, params, dom, rect, size) {
-            const coords = chart?.convertToPixel({ seriesId: 'graph' }, [
-              (params as any).data.x,
-              (params as any).data.y,
-            ]);
-            if (coords) {
-              return [coords[0] + props.ttOffsetX, coords[1] + props.ttOffsetY];
-            }
-            return point;
-          },
-        },
       },
     ],
   };
@@ -326,7 +379,7 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
   return (
     <EChartsRenderer
       option={option}
-      onNodeClick={handleDoubleClick}
+      onNodeClick={handleDoubleClick} // allow double-click expansion
       onLegendClick={(info: any, chart: ECharts) => {
         setSelectedTypes(info.selected);
       }}
