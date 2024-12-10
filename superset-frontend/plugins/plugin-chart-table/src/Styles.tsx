@@ -86,6 +86,7 @@ export default styled.div`
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      width: inherit;
     }
     //.dt-truncate-cell:hover {
     //  overflow: visible;
@@ -95,7 +96,7 @@ export default styled.div`
 
     .dt-pagination {
       text-align: right;
-      /* use padding instead of margin so clientHeight can capture it */
+      /* use padding unstead of margin so clientHeight can capture it */
       padding-top: 0.5em;
     }
     .dt-pagination .pagination {
