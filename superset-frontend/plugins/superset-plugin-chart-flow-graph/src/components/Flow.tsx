@@ -35,8 +35,8 @@ const elk = new ELK();
 const useLayoutedElements = () => {
   const defaultOptions = {
     'elk.algorithm': 'layered',
-    'elk.layered.spacing.nodeNodeBetweenLayers': 80,
-    'elk.spacing.nodeNode': 80,
+    'elk.layered.spacing.nodeNodeBetweenLayers': 300,
+    'elk.spacing.nodeNode': 20,
     'elk.spacing.componentComponent': 80,
     'elk.partitioning.activate': true,
     'elk.separateConnectedComponents': false,

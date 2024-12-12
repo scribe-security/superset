@@ -329,7 +329,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'TextControl',
               label: t('Node Width'),
-              default: 120,
+              default: 100,
               renderTrigger: true,
               description: t('The width of your nodes'),
               validators: [validateInteger, validateNonEmpty],
@@ -340,7 +340,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'TextControl',
               label: t('Node Height'),
-              default: 60,
+              default: 40,
               renderTrigger: true,
               description: t('The height of your nodes'),
               validators: [validateInteger, validateNonEmpty],
@@ -524,7 +524,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'TextControl',
               label: t('Spacing: Node-Node'),
-              default: '80',
+              default: '20',
               description: t('ELK.js node-node spacing setting'),
               renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
@@ -535,7 +535,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'TextControl',
               label: t('Node-Node Between Layers'),
-              default: '80',
+              default: '300',
               description: t('ELK.js node-node between layers spacing setting'),
               renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
@@ -546,7 +546,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'TextControl',
               label: t('Component-Component'),
-              default: '80',
+              default: '0',
               description: t('ELK.js component-component spacing setting'),
               renderTrigger: true,
               validators: [validateInteger, validateNonEmpty],
