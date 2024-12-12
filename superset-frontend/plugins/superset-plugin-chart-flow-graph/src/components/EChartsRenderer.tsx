@@ -39,9 +39,10 @@ const EChartsRenderer = ({
   useEffect(() => {
     let chart: ECharts | undefined;
     if (chartRef.current) {
-      chart = init(chartRef.current, theme);
+      chart = init(chartRef.current, theme, { renderer: 'svg' });
       setChart(chart);
     }
+    
 
     const resizeChart = () => {
       chart?.resize();
