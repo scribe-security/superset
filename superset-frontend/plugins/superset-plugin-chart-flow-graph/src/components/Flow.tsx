@@ -98,6 +98,7 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
       chart.resize();
       chart.dispatchAction({ type: 'restore' });
     }
+    console.log("SHALOM", props.edgeColors)
 
     let { tree } = buildTree(
       props.data as unknown as SupersetData[],
