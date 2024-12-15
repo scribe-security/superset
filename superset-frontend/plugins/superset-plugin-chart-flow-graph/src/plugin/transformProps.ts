@@ -102,8 +102,9 @@ export default function transformProps(chartProps: ChartProps) {
     edgeColorCol: d[edgeColorCol],
     edgeLabelCol: d[edgeLabelCol],
     tooltipCol: d[tooltipCol],
-    count: d.count,
+    count: d.count || 0, // Fallback to 0 if 'count' is missing
   }));
+  
 
   // const edgeColors = Object.entries(formData)
   //   .filter(([k, _]) => k.startsWith('edgeColor') && k !== 'edgeColorCol')

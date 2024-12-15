@@ -103,7 +103,7 @@ export default function EchartsGraph({
       }
     },
     contextmenu: (e: Event) => {
-      const handleNodeClick = (data: Data) => {
+      const Click = (data: Data) => {
         const node = data.find(item => item.id === e.data.id);
         if (node?.name) {
           return [
@@ -143,7 +143,7 @@ export default function EchartsGraph({
         const pointerEvent = e.event.event;
         const data = (echartOptions as any).series[0].data as Data;
         const drillToDetailFilters =
-          e.dataType === 'node' ? handleNodeClick(data) : handleEdgeClick(data);
+          e.dataType === 'node' ? deClick(data) : handleEdgeClick(data);
         const node = data.find(item => item.id === e.data.id);
 
         onContextMenu(pointerEvent.clientX, pointerEvent.clientY, {
