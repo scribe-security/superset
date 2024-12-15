@@ -353,7 +353,7 @@ const config: ControlPanelConfig = {
             config: {
               type: 'SliderControl',
               label: t('Node Scale Ratio'),
-              default: 0,
+              default: 1,
               min: 0,
               max: 1,
               step: 0.1,

@@ -37,23 +37,20 @@ const EChartsRenderer = ({
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let chart: ECharts | undefined;
-    if (chartRef.current) {
-      chart = init(chartRef.current, theme, { renderer: 'svg' });
-      setChart(chart);
-    }
-    
-
-    const resizeChart = () => {
-      chart?.resize();
-    };
+    if (!chartRef.current) return; // Early return if ref is null
+  
+    let chart: ECharts | undefined = init(chartRef.current, theme, { renderer: 'svg' });
+    setChart(chart);
+  
+    const resizeChart = () => chart?.resize();
     window.addEventListener('resize', resizeChart);
-
+  
     return () => {
       chart?.dispose();
       window.removeEventListener('resize', resizeChart);
     };
   }, [theme]);
+  
 
   useEffect(() => {
     if (chartRef.current) {
@@ -126,5 +123,7 @@ const EChartsRenderer = ({
   }, [loading, theme]);
 
   return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
+};
 
+// Export must be at the top level, not inside any block of code
 export default EChartsRenderer;
