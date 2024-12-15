@@ -50,11 +50,29 @@ const useLayoutedElements = () => {
       nodeSize: { width: number; height: number },
     ) => {
       const layoutOptions = { ...defaultOptions, ...options };
-
+  
+      // Sort nodes based on priority: type > edges > external ID
+      const sortedNodes = [...nodes].sort((a, b) => {
+        // 1. Sort by type (category)
+        const typeA = a.category || '';
+        const typeB = b.category || '';
+        const typeComparison = typeA.localeCompare(typeB);
+        if (typeComparison !== 0) return typeComparison;
+  
+        // 2. Sort by presence of edges
+        const hasEdgesA = edges.some(e => e.source === a.id || e.target === a.id) ? 0 : 1;
+        const hasEdgesB = edges.some(e => e.source === b.id || e.target === b.id) ? 0 : 1;
+        const edgeComparison = hasEdgesA - hasEdgesB;
+        if (edgeComparison !== 0) return edgeComparison;
+  
+        // 3. Sort alphabetically by external ID
+        return a.id.localeCompare(b.id);
+      });
+  
       const graph = {
         id: 'root',
         layoutOptions,
-        children: nodes.map((c: Node) => ({
+        children: sortedNodes.map((c: Node) => ({
           ...c,
           width: nodeSize.width,
           height: nodeSize.height,
@@ -65,7 +83,7 @@ const useLayoutedElements = () => {
           targets: [e.target],
         })),
       };
-
+  
       elk.layout(graph).then(({ children }) => {
         if (children) {
           setNodes(children as Node[]);
@@ -74,6 +92,9 @@ const useLayoutedElements = () => {
     },
     [],
   );
+  
+  
+  
 
   return { getLayoutedElements };
 };
