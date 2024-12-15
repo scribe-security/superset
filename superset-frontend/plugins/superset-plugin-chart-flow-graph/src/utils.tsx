@@ -62,9 +62,8 @@ export const buildTree = (
           edgeColors['*'] ||
           edgeColor;
       }
-      console.log("What", log.colorCol)
 
-
+ 
       // const nodesParent = nodes.find((v) => v.id === parentId);
       const existingNode = tree.find(v => v.id === id);
       let treeNode: NodeTreeType;
