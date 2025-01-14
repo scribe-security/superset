@@ -58,7 +58,7 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql import ColumnElement, expression, Select
 
-from superset import app, db_engine_specs
+from superset import app, db_engine_specs, is_feature_enabled
 from superset.commands.database.exceptions import DatabaseInvalidError
 from superset.constants import LRU_CACHE_MAX_SIZE, PASSWORD_MASK
 from superset.databases.utils import make_url_safe
@@ -398,9 +398,11 @@ class Database(
 
         sqlalchemy_uri = self.sqlalchemy_uri_decrypted
         engine_context = nullcontext()
-        ssh_tunnel = override_ssh_tunnel or DatabaseDAO.get_ssh_tunnel(
-            database_id=self.id
-        )
+        ssh_tunnel: SSHTunnel | None = None
+        if is_feature_enabled("SSH_TUNNELING"):  # Do not try to get existing tunnels when tunneling is disabled
+            ssh_tunnel = override_ssh_tunnel or DatabaseDAO.get_ssh_tunnel(
+                database_id=self.id
+            )
 
         if ssh_tunnel:
             # if ssh_tunnel is available build engine with information
