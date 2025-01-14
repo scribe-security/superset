@@ -418,9 +418,11 @@ class Database(Model, AuditMixinNullable, ImportExportMixin):  # pylint: disable
 
         sqlalchemy_uri = self.sqlalchemy_uri_decrypted
         engine_context = nullcontext()
-        ssh_tunnel = override_ssh_tunnel or DatabaseDAO.get_ssh_tunnel(
-            database_id=self.id
-        )
+        ssh_tunnel: SSHTunnel | None = None
+        if is_feature_enabled("SSH_TUNNELING"):  # Do not try to get existing tunnels when tunneling is disabled
+            ssh_tunnel = override_ssh_tunnel or DatabaseDAO.get_ssh_tunnel(
+                database_id=self.id
+            )
 
         if ssh_tunnel:
             # if ssh_tunnel is available build engine with information
