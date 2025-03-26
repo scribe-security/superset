@@ -26,6 +26,59 @@ governing permissions and limitations under the License. #}
     %}sizes={{favicon.sizes}}{% endif %} href="{{ "" if
     favicon.href.startswith("http") else assets_prefix }}{{favicon.href}}" > {%
     endfor %}
+      <style type="text/css" >
+            .sc-loader-init {
+              position: absolute;
+              height: 100%;
+              width: 100%;
+              background-color: white; /* bg-blue-50 */
+              left: 0;
+              top: 0;
+              z-index: 40;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #e5e7eb; /* text-gray-200 */
+              transition: opacity 1000ms;
+            }
+
+            .circular-loader-init {
+              height: 4rem; /* h-8 */
+              width: 4rem; /* w-8 */
+              transform-origin: center;
+              animation: rotate 2s linear infinite;
+            }
+
+            .sc-loader-init .circular-loader-init .sc-loader-path-init {
+              stroke-dasharray: 150, 200;
+              stroke-dashoffset: -10;
+              stroke-linecap: round;
+              stroke: #e5e7eb; /* stroke-gray-200 */
+              animation: dash 1.5s ease-in-out infinite;
+            }
+            @keyframes rotate {
+              100% {
+                transform: rotate(360deg);
+              }
+            }
+
+            @keyframes dash {
+              0% {
+                stroke-dasharray: 1, 200;
+                stroke-dashoffset: 0;
+              }
+
+              50% {
+                stroke-dasharray: 89, 200;
+                stroke-dashoffset: -35;
+              }
+
+              100% {
+                stroke-dasharray: 89, 200;
+                stroke-dashoffset: -124;
+              }
+            }
+    </style>
     <link
       rel="stylesheet"
       type="text/css"
@@ -82,16 +135,31 @@ governing permissions and limitations under the License. #}
     {% block navbar %} {% if not standalone_mode %} {% include
     'appbuilder/navbar.html' %} {% endif %} {% endblock %} {% block body %}
     <div id="app" data-bootstrap="{{ bootstrap_data }}">
-      <img
-        src="{{ assets_prefix }}/static/assets/images/loading.gif"
-        style="
-          width: 50px;
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-        "
-      />
+      <!--<img-->
+      <!--  src="{{ assets_prefix }}/static/assets/images/loading.gif"-->
+      <!--  style="-->
+      <!--    width: 50px;-->
+      <!--    position: absolute;-->
+      <!--    top: 50%;-->
+      <!--    left: 50%;-->
+      <!--    transform: translate(-50%, -50%);-->
+      <!--  "-->
+      <!--/>-->
+          <!-- Loading Spinner Div -->
+    <div class="sc-loader-init">
+      <svg class="circular-loader-init" viewBox="25 25 50 50">
+        <circle
+          class="sc-loader-path-init"
+          cx="50"
+          cy="50"
+          r="20"
+          fill="none"
+          stroke="#e5e7eb"
+          stroke-width="4"
+        />
+      </svg>
+    </div>
+
     </div>
     {% endblock %}
 

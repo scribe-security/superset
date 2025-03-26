@@ -23,9 +23,11 @@ import Table, { ColumnsType, TableSize } from 'src/components/Table';
 import { alphabeticalSort } from 'src/components/Table/sorters';
 // @ts-ignore
 import LOADING_GIF from 'src/assets/images/loading.gif';
-import { DatasetObject } from 'src/features/datasets/AddDataset/types';
-import { ITableColumn } from './types';
+// import { DatasetObject } from 'src/features/datasets/AddDataset/types';
+import Loader from 'src/components/Loading/Loader';
 import MessageContent from './MessageContent';
+import { ITableColumn } from './types';
+import { DatasetObject } from '../types';
 
 /**
  * Enum defining CSS position options
@@ -94,7 +96,7 @@ const LoaderContainer = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  position: absolute;
+  position: relative;
   top: 0;
   bottom: 0;
   left: 0;
@@ -273,7 +275,8 @@ const DatasetPanel = ({
     loader = (
       <LoaderContainer>
         <StyledLoader>
-          <img alt={ALT_LOADING} src={LOADING_GIF} />
+          <Loader loading />
+          {/* <img alt={ALT_LOADING} src={LOADING_GIF} /> */}
           <div>{REFRESHING}</div>
         </StyledLoader>
       </LoaderContainer>
