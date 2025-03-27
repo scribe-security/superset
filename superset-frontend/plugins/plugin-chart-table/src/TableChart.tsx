@@ -62,12 +62,12 @@ import {
   TableOutlined,
 } from '@ant-design/icons';
 import { isEmpty, isNumber } from 'lodash';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import {
   ColorSchemeEnum,
   DataColumnMeta,
   TableChartTransformedProps,
 } from './types';
-import SingletonSwitchboard from '@superset-ui/switchboard';
 
 import DataTable, {
   DataTableProps,
@@ -702,7 +702,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           ? defaultColorPN
           : config.colorPositiveNegative;
 
-      const { truncateLongCells } = config;
+      const {truncateLongCells} = config;
 
       const hasColumnColorFormatters =
         isNumeric &&
