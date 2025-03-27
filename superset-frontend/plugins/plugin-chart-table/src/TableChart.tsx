@@ -68,7 +68,6 @@ import {
   DataColumnMeta,
   TableChartTransformedProps,
 } from './types';
-import Tooltip from 'antd/lib/tooltip';
 
 import DataTable, {
   DataTableProps,
