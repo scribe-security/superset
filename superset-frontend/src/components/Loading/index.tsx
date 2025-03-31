@@ -32,6 +32,7 @@ export interface Props {
   position?: PositionOption;
   className?: string;
   image?: string;
+  text?: string;
 }
 
 // const LoaderImg = styled.img`
@@ -62,6 +63,7 @@ export default function Loading({
   position = 'floating',
   image,
   className,
+  text,
 }: Props) {
   return (
     // <LoaderImg
@@ -73,6 +75,6 @@ export default function Loading({
     //   aria-label="Loading"
     //   data-test="loading-indicator"
     // />
-    <Loader loading />
+    <Loader loading text={text} />
   );
 }

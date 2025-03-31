@@ -135,7 +135,8 @@ const LoadingDiv = styled.div`
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 80%;
+  height: 100%;
+  width: 100%;
   transform: translate(-50%, -50%);
 `;
 
@@ -258,8 +259,8 @@ class Chart extends PureComponent {
 
     return (
       <LoadingDiv>
-        <Loading position="inline-centered" />
-        <MessageSpan>{message}</MessageSpan>
+        <Loading text={message} position="inline-centered" />
+        {/* <MessageSpan>{message}</MessageSpan> */}
       </LoadingDiv>
     );
   }
@@ -349,6 +350,7 @@ class Chart extends PureComponent {
           height={height}
           width={width}
         >
+          {/* {this.renderSpinner(databaseName)} */}
           {isLoading
             ? this.renderSpinner(databaseName)
             : this.renderChartContainer()}
