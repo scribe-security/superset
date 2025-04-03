@@ -140,13 +140,13 @@ const LoadingDiv = styled.div`
   transform: translate(-50%, -50%);
 `;
 
-const MessageSpan = styled.span`
-  display: block;
-  text-align: center;
-  margin: ${({ theme }) => theme.gridUnit * 4}px auto;
-  width: fit-content;
-  color: ${({ theme }) => theme.colors.grayscale.base};
-`;
+// const MessageSpan = styled.span`
+//   display: block;
+//   text-align: center;
+//   margin: ${({ theme }) => theme.gridUnit * 4}px auto;
+//   width: fit-content;
+//   color: ${({ theme }) => theme.colors.grayscale.base};
+// `;
 
 const MonospaceDiv = styled.div`
   font-family: ${({ theme }) => theme.typography.families.monospace};

@@ -28,10 +28,11 @@ ARG NPM_BUILD_CMD="build"
 
 # Somehow we need python3 + build-essential on this side of the house to install node-gyp
 RUN apt-get update -qq \
-    && apt-get install \
-        -yqq --no-install-recommends \
-        build-essential \
-        python3
+  && apt-get install \
+  -yqq --no-install-recommends \
+  build-essential \
+  python3 \
+  zstd
 
 ENV BUILD_CMD=${NPM_BUILD_CMD} \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true

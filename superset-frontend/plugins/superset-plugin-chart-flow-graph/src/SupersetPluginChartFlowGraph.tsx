@@ -16,9 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import React, { createRef } from 'react';
+import { createRef } from 'react';
 import { styled } from '@superset-ui/core';
-import {
+import type {
   SupersetPluginChartFlowGraphProps,
   SupersetPluginChartFlowGraphStylesProps,
 } from './types';

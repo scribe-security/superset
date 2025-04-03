@@ -270,7 +270,7 @@ const ServerPaginationTable = () => {
   return (
     <Table
       columns: paginationColumns,
-      size: TableSize.SMALL,
+      size: TableSize.Small,
       pageSizeOptions: ['10', '20', '50'],
       defaultPageSize: 10,
       data={data}

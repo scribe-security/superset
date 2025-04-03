@@ -16,15 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import Button, { ButtonStyle, ButtonSize } from 'src/components/Button';
+import Button, {
+  type ButtonStyle,
+  type ButtonSize,
+} from 'src/components/Button';
 
 type onClickFunction = (row: object, index: number) => void;
 
 export interface ButtonCellProps {
-  label: string;
-  onClick: onClickFunction;
-  row: object;
-  index: number;
+  label?: string;
+  onClick?: onClickFunction;
+  row?: object;
+  index?: number;
   tooltip?: string;
   buttonStyle?: ButtonStyle;
   buttonSize?: ButtonSize;
@@ -45,7 +48,7 @@ export function ButtonCell(props: ButtonCellProps) {
     <Button
       buttonStyle={buttonStyle}
       buttonSize={buttonSize}
-      onClick={() => onClick?.(row, index)}
+      onClick={() => onClick?.(row || {}, index || 0)}
       key={`${buttonStyle}_${buttonSize}`}
       tooltip={tooltip}
     >

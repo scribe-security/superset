@@ -24,7 +24,7 @@ import { LineEditableTabs } from 'src/components/Tabs';
 import { LOG_ACTIONS_SELECT_DASHBOARD_TAB } from 'src/logger/LogUtils';
 import { AntdModal } from 'src/components';
 import SingletonSwitchboard from '@superset-ui/switchboard';
-import DragDroppable from '../dnd/DragDroppable';
+import { Draggable } from '../dnd/DragDroppable';
 import DragHandle from '../dnd/DragHandle';
 import DashboardComponent from '../../containers/DashboardComponent';
 import DeleteComponentButton from '../DeleteComponentButton';

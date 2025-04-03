@@ -18,6 +18,7 @@
  */
 import { PureComponent } from 'react';
 import PropTypes from 'prop-types';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { isFeatureEnabled, t, FeatureFlag } from '@superset-ui/core';
 
 import { PluginContext } from 'src/components/DynamicPlugins';
@@ -25,7 +26,6 @@ import Loading from 'src/components/Loading';
 import getBootstrapData from 'src/utils/getBootstrapData';
 import getChartIdsFromLayout from '../util/getChartIdsFromLayout';
 import getLayoutComponentFromChartId from '../util/getLayoutComponentFromChartId';
-
 import {
   slicePropShape,
   dashboardInfoPropShape,

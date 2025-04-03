@@ -55,6 +55,9 @@ export const styled = emotionStyled;
 const defaultTheme = {
   borderRadius: 2,
   colors: {
+    scribe: {
+      secondary: 'rgb(33, 72, 135)',
+    },
     text: {
       label: '#879399',
       help: '#737373',

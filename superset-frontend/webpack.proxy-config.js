@@ -16,7 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-const zlib = require('zlib');
+const zlib = require('node:zlib');
+const { ZSTDDecompress } = require('simple-zstd');
 
 const yargs = require('yargs');
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -38,9 +39,10 @@ const backend = (supersetUrl || `http://localhost:${supersetPort}`).replace(
 let manifest;
 function isHTML(res) {
   const CONTENT_TYPE_HEADER = 'content-type';
-  const contentType = res.getHeader
-    ? res.getHeader(CONTENT_TYPE_HEADER)
-    : res.headers[CONTENT_TYPE_HEADER];
+  const contentType =
+    (res.getHeader
+      ? res.getHeader(CONTENT_TYPE_HEADER)
+      : res.headers[CONTENT_TYPE_HEADER]) || '';
   return contentType.includes('text/html');
 }
 
@@ -114,20 +116,30 @@ function copyHeaders(originalResponse, response) {
  * Manipulate HTML server response to replace asset files with
  * local webpack-dev-server build.
  */
+/**
+ * Manipulate HTML server response to replace asset files with
+ * local webpack-dev-server build.
+ */
 function processHTML(proxyResponse, response) {
   let body = Buffer.from([]);
   let originalResponse = proxyResponse;
   let uncompress;
   const responseEncoding = originalResponse.headers['content-encoding'];
-
-  // decode GZIP response
+  console.log('responseEncoding', responseEncoding);
+  // decode compressed response based on encoding type
   if (responseEncoding === 'gzip') {
     uncompress = zlib.createGunzip();
   } else if (responseEncoding === 'br') {
     uncompress = zlib.createBrotliDecompress();
   } else if (responseEncoding === 'deflate') {
     uncompress = zlib.createInflate();
+  } else if (responseEncoding === 'zstd') {
+    uncompress = ZSTDDecompress();
+  } else {
+    proxyResponse.pipe(response);
+    return;
   }
+
   if (uncompress) {
     originalResponse.pipe(uncompress);
     originalResponse = uncompress;

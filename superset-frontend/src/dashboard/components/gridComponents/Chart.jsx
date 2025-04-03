@@ -129,7 +129,7 @@ const descriptionKeys = {
   CHART_BAR_CLICK: 'CHART_BAR_CLICK',
 };
 
-class Chart extends React.Component {
+class Chart extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -266,7 +266,7 @@ class Chart extends React.Component {
       const computedStyle = getComputedStyle(this.headerRef).getPropertyValue(
         'margin-bottom',
       );
-      const marginBottom = parseInt(computedStyle, 10) || 0;
+      const marginBottom = Number.parseInt(computedStyle, 10) || 0;
       return this.headerRef.offsetHeight + marginBottom;
     }
     return DEFAULT_HEADER_HEIGHT;
@@ -563,7 +563,7 @@ class Chart extends React.Component {
         <ChartWrapper
           className={cx(
             'dashboard-chart',
-            isOverflowable && 'dashboard-chart--overflowable',
+            // isOverflowable && 'dashboard-chart--overflowable',
           )}
           onClick={event => {
             this.handleWrapperClick(event);

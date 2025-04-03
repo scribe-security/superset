@@ -32,7 +32,7 @@ const StyledTooltip = (props: any) => {
               max-width: ${theme.gridUnit * 125}px;
               word-wrap: break-word;
               text-align: center;
-
+              background-color: ${theme.colors.primary.base};
               pre {
                 background: transparent;
                 border: none;
@@ -104,7 +104,7 @@ const ColumnElement = ({ column }: ColumnElementProps) => {
     ));
   }
   return (
-    <div className="clearfix table-column">
+    <div className="table-column clearfix">
       <div className="pull-left m-l-10 col-name">
         {columnName}
         {icons}

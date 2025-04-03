@@ -170,7 +170,7 @@ const VerticalFilterBar: FC<VerticalBarProps> = ({
       overflow: 'auto',
       height,
       overscrollBehavior: 'contain',
-      marginTop: '78px',
+      marginTop: '29px',
     }),
     [height],
   );

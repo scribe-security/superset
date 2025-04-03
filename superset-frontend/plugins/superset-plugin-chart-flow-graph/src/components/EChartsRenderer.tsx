@@ -1,12 +1,12 @@
 import {
-  ECElementEvent,
-  ECharts,
-  EChartsOption,
+  type ECElementEvent,
+  type ECharts,
+  type EChartsOption,
   getInstanceByDom,
   init,
-  SetOptionOpts,
+  type SetOptionOpts,
 } from 'echarts';
-import React, { CSSProperties, useEffect, useRef } from 'react';
+import { type CSSProperties, useEffect, useRef } from 'react';
 
 export interface ReactEChartsProps {
   option: EChartsOption;

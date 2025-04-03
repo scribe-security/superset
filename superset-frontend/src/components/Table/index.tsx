@@ -159,7 +159,7 @@ export interface TableProps<RecordType> {
   childrenColumnName?: string;
 }
 
-const defaultRowSelection: Key[] = [];
+const defaultRowSelection: React.Key[] = [];
 
 const PAGINATION_HEIGHT = 40;
 const HEADER_HEIGHT = 68;

@@ -18,7 +18,7 @@
  */
 import { useTheme, css } from '@superset-ui/core';
 import { Tooltip as AntdTooltip } from 'antd';
-import {
+import type {
   TooltipProps,
   TooltipPlacement as AntdTooltipPlacement,
 } from 'antd/lib/tooltip';
@@ -39,6 +39,10 @@ export const Tooltip = (props: TooltipProps) => {
               content: '';
               display: block;
             }
+          }
+          .ant-tooltip-inner,
+          .ant-tooltip-arrow-content {
+            background-color: ${theme.colors.scribe.secondary} !important;
           }
           .ant-tooltip-inner > p {
             margin: 0;

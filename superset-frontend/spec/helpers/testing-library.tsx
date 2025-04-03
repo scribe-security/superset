@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import '@testing-library/jest-dom/extend-expect';
+import '@testing-library/jest-dom';
 import { ReactNode, ReactElement } from 'react';
 import {
   render,
@@ -117,10 +117,8 @@ export async function selectOption(option: string, selectName?: string) {
   );
   await userEvent.click(select);
   const item = await waitFor(() =>
-    within(
-      // eslint-disable-next-line testing-library/no-node-access
-      document.querySelector('.rc-virtual-list')!,
-    ).getByText(option),
+    // eslint-disable-next-line testing-library/no-node-access
+    within(document.querySelector('.rc-virtual-list')!).getByText(option),
   );
   await userEvent.click(item);
 }

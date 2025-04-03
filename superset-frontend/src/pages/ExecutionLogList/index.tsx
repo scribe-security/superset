@@ -31,7 +31,7 @@ import {
   useListViewResource,
   useSingleViewResource,
 } from 'src/views/CRUD/hooks';
-import { AlertObject, LogObject } from 'src/features/alerts/types';
+import type { AlertObject, LogObject } from 'src/features/alerts/types';
 
 const PAGE_SIZE = 25;
 

@@ -17,10 +17,10 @@
  * under the License.
  */
 
-import { dirname, join } from 'path';
+import { dirname, join } from 'node:path';
 import helpers, { result } from 'yeoman-test';
-import { copySync } from 'fs-extra/esm';
-import { fileURLToPath } from 'url';
+import { copySync } from 'fs-extra';
+import { fileURLToPath } from 'node:url';
 import pluginChartModule from '../generators/plugin-chart';
 
 test('generator-superset:plugin-chart:creates files', async () => {

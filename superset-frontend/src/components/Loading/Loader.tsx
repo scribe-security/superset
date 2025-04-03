@@ -1,10 +1,4 @@
-import React, {
-  type FC,
-  type ReactNode,
-  useEffect,
-  useState,
-  useRef,
-} from 'react';
+import { type FC, type ReactNode, useEffect, useState, useRef } from 'react';
 import cx from 'classnames';
 import './styles.css';
 
@@ -55,8 +49,15 @@ const Loader: FC<Props> = ({
       const viewportHeight = window.innerHeight;
 
       // Set position flag (large parent) - only if parent is twice larger than viewport
-      setIsParentLarger(parentHeight > viewportHeight * 2);
-
+      setIsParentLarger(parentHeight > viewportHeight + 300);
+      console.log(
+        'parentHeight',
+        parentHeight,
+        'viewportHeight',
+        viewportHeight,
+        'isParentLarger',
+        isParentLarger,
+      );
       // Determine size based on parent dimensions
       if (
         parentHeight > viewportHeight - 200 ||

@@ -17,7 +17,7 @@
  * under the License.
  */
 import {
-  FC,
+  type FC,
   memo,
   useCallback,
   useEffect,
@@ -27,18 +27,18 @@ import {
 } from 'react';
 
 import {
-  ChartDataResponseResult,
+  type ChartDataResponseResult,
   Behavior,
-  DataMask,
+  type DataMask,
   isFeatureEnabled,
   FeatureFlag,
   getChartMetadataRegistry,
-  JsonObject,
-  QueryFormData,
+  type JsonObject,
+  type QueryFormData,
   styled,
   SuperChart,
   t,
-  ClientErrorObject,
+  type ClientErrorObject,
   getClientErrorObject,
 } from '@superset-ui/core';
 import { useDispatch, useSelector } from 'react-redux';
@@ -48,7 +48,7 @@ import Loading from 'src/components/Loading';
 import BasicErrorAlert from 'src/components/ErrorMessage/BasicErrorAlert';
 import ErrorMessageWithStackTrace from 'src/components/ErrorMessage/ErrorMessageWithStackTrace';
 import { waitForAsyncData } from 'src/middleware/asyncEvent';
-import { FilterBarOrientation, RootState } from 'src/dashboard/types';
+import { FilterBarOrientation, type RootState } from 'src/dashboard/types';
 import {
   onFiltersRefreshSuccess,
   setDirectPathToChild,
@@ -56,7 +56,7 @@ import {
 import { RESPONSIVE_WIDTH } from 'src/filters/components/common';
 import { FAST_DEBOUNCE } from 'src/constants';
 import { dispatchHoverAction, dispatchFocusAction } from './utils';
-import { FilterControlProps } from './types';
+import type { FilterControlProps } from './types';
 import { getFormData } from '../../utils';
 import { useFilterDependencies } from './state';
 import { useFilterOutlined } from '../useFilterOutlined';

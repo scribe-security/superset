@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-syntax
 import React, {
   Dispatch,
   SetStateAction,
@@ -105,8 +106,9 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     nodeId: string;
     chart: ECharts;
   }>();
-  const [selectedTypes, setSelectedTypes] =
-    useState<{ [key: string]: boolean }>();
+  const [selectedTypes, setSelectedTypes] = useState<{
+    [key: string]: boolean;
+  }>();
   const [chart, setChart] = useState<ECharts>();
 
   const { getLayoutedElements } = useLayoutedElements();
@@ -339,6 +341,7 @@ const Flow = (props: SupersetPluginChartFlowGraphProps) => {
     ],
   };
 
+  // @ts-ignore
   return (
     <>
       <EChartsRenderer

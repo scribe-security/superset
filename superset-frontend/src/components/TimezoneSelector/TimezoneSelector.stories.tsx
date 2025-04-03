@@ -17,7 +17,7 @@
  * under the License.
  */
 import { useArgs } from '@storybook/preview-api';
-import TimezoneSelector, { TimezoneSelectorProps } from './index';
+import TimezoneSelector, { type TimezoneSelectorProps } from './index';
 
 export default {
   title: 'TimezoneSelector',
