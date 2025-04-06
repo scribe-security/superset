@@ -1,5 +1,5 @@
 # Build Stage
-ARG BASE_IMAGE=scribesecurity/superset:4.1.2-to-wolfie-1-py311
+ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 # Final Base Image
 FROM cgr.dev/chainguard/wolfi-base:latest

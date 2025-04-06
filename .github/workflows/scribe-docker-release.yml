@@ -132,19 +132,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # This step uses docker CLI directly to ensure the image is available
       - name: Build base image locally
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          load: true
-          # Cannot use multi-platform with load option
-          target: lean
-          build-args: |
-            PY_VER=3.11-slim-bookworm
-          tags: |
-            scribesecurity/superset:local-base
+        run: |
+          docker build -t superset-local-base:latest -f Dockerfile --target lean \
+            --build-arg PY_VER=3.11-slim-bookworm .
+          docker images
+          echo "Base image built successfully as superset-local-base:latest"
 
       - name: Build and push Wolfi-based image
         uses: docker/build-push-action@v5
@@ -157,7 +151,7 @@ jobs:
             scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
             ${{ github.ref_name == '4.1.2-to-wolfie' && format('scribesecurity/superset:4.1.2-to-wolfie-wolfi-{0}', matrix.platform == 'linux/amd64' && 'amd' || 'arm') || '' }}
           build-args: |
-            BASE_IMAGE=scribesecurity/superset:local-base
+            BASE_IMAGE=superset-local-base:latest
 
       - name: Print version info
         if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
