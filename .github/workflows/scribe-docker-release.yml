@@ -132,26 +132,34 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # This step uses docker CLI directly to ensure the image is available
-      - name: Build base image locally
+      # Use direct docker commands for both base and Wolfi builds
+      - name: Build and push Wolfi image with local base
         run: |
-          docker build -t superset-local-base:latest -f Dockerfile --target lean \
+          # Step 1: Build the base image
+          echo "Building base image..."
+          docker build -t superset-base:local -f Dockerfile --target lean \
             --build-arg PY_VER=3.11-slim-bookworm .
-          docker images
-          echo "Base image built successfully as superset-local-base:latest"
-
-      - name: Build and push Wolfi-based image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./wolfi/Dockerfile.wolfie
-          push: true
-          platforms: ${{ matrix.platform }}
-          tags: |
-            scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-            ${{ github.ref_name == '4.1.2-to-wolfie' && format('scribesecurity/superset:4.1.2-to-wolfie-wolfi-{0}', matrix.platform == 'linux/amd64' && 'amd' || 'arm') || '' }}
-          build-args: |
-            BASE_IMAGE=superset-local-base:latest
+          
+          # Step 2: Verify the base image
+          docker images | grep superset-base
+          
+          # Step 3: Build the Wolfi image using the local base
+          echo "Building Wolfi image..."
+          docker build -t scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} \
+            -f wolfi/Dockerfile.wolfie \
+            --build-arg BASE_IMAGE=superset-base:local .
+          
+          # Step 4: Push the Wolfi image to Docker Hub
+          echo "Pushing Wolfi image to Docker Hub..."
+          docker push scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
+          
+          # Step 5: Also tag it with the branch version if on the target branch
+          if [ "${{ github.ref_name }}" = "4.1.2-to-wolfie" ]; then
+            wolfi_tag=scribesecurity/superset:4.1.2-to-wolfie-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
+            docker tag scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} $wolfi_tag
+            docker push $wolfi_tag
+            echo "Also pushed $wolfi_tag"
+          fi
 
       - name: Print version info
         if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
