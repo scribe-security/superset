@@ -6,9 +6,9 @@ on:
       release_index:
         required: true
       build_type:
-        description: 'Image to build'
+        description: "Image to build"
         required: true
-        default: 'base'
+        default: "base"
         type: choice
         options:
           - base
@@ -49,15 +49,15 @@ jobs:
             "release" \
             --build_context_ref "${{ github.ref_name }}-${{ inputs.release_index }}" \
             --platform ${{ matrix.platform }}
-          
+
       - name: Print version info
-        if: ${{ matrix.platform == 'linux/amd64' }}  # Only print once
+        if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
         run: |
           echo "::notice::Successfully built and pushed standard Superset image:"
           echo "::notice::Tag: scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-py311"
           echo "::notice::Branch: ${{ github.ref_name }}"
           echo "::notice::Release Index: ${{ inputs.release_index }}"
-          
+
   wolfi-build:
     name: wolfi-build
     needs: [docker-build]
@@ -97,9 +97,9 @@ jobs:
             ${{ github.ref_name == '4.1.2-to-wolfie' && format('scribesecurity/superset:4.1.2-to-wolfie-wolfi-{0}', matrix.platform == 'linux/amd64' && 'amd' || 'arm') || '' }}
           build-args: |
             BASE_IMAGE=scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-py311
-            
+
       - name: Print version info
-        if: ${{ matrix.platform == 'linux/amd64' }}  # Only print once
+        if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
         run: |
           echo "::notice::Successfully built and pushed Wolfi-based image:"
           echo "::notice::Tag: scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-amd"
@@ -132,19 +132,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build base image locally first
+      - name: Build base image locally
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: false
           load: true
-          platforms: ${{ matrix.platform }}
+          platforms: ${{ matrix.platform }} # Single platform builds only
           target: lean
           build-args: |
             PY_VER=3.11-slim-bookworm
           tags: |
-            scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-py311-local
+            scribesecurity/superset:local-base
 
       - name: Build and push Wolfi-based image
         uses: docker/build-push-action@v5
@@ -152,15 +152,15 @@ jobs:
           context: .
           file: ./wolfi/Dockerfile.wolfie
           push: true
-          platforms: ${{ matrix.platform }}
+          platforms: ${{ matrix.platform }} # Single platform builds only
           tags: |
             scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
             ${{ github.ref_name == '4.1.2-to-wolfie' && format('scribesecurity/superset:4.1.2-to-wolfie-wolfi-{0}', matrix.platform == 'linux/amd64' && 'amd' || 'arm') || '' }}
           build-args: |
-            BASE_IMAGE=scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-py311-local
-            
+            BASE_IMAGE=scribesecurity/superset:local-base
+
       - name: Print version info
-        if: ${{ matrix.platform == 'linux/amd64' }}  # Only print once
+        if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
         run: |
           echo "::notice::Successfully built and pushed Wolfi-based image (standalone mode):"
           echo "::notice::Tag: scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-amd"
