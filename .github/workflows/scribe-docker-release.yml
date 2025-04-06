@@ -139,7 +139,7 @@ jobs:
           file: ./Dockerfile
           push: false
           load: true
-          platforms: ${{ matrix.platform }} # Single platform builds only
+          # Cannot use multi-platform with load option
           target: lean
           build-args: |
             PY_VER=3.11-slim-bookworm
@@ -152,7 +152,7 @@ jobs:
           context: .
           file: ./wolfi/Dockerfile.wolfie
           push: true
-          platforms: ${{ matrix.platform }} # Single platform builds only
+          platforms: ${{ matrix.platform }}
           tags: |
             scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
             ${{ github.ref_name == '4.1.2-to-wolfie' && format('scribesecurity/superset:4.1.2-to-wolfie-wolfi-{0}', matrix.platform == 'linux/amd64' && 'amd' || 'arm') || '' }}
