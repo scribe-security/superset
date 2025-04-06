@@ -1,0 +1,89 @@
+# Build Stage
+ARG BASE_IMAGE=scribesecurity/superset:4.1.2-to-wolfie-1-py311
+FROM ${BASE_IMAGE} as build
+# Final Base Image
+FROM cgr.dev/chainguard/wolfi-base:latest
+
+# Environment Variables (removing the SECRET_KEY)
+ENV LANG=C.UTF-8 \
+  LC_ALL=C.UTF-8 \
+  SUPERSET_ENV=production \
+  FLASK_APP="superset.app:create_app()" \
+  PYTHONPATH="/app/pythonpath" \
+  SUPERSET_HOME="/app/superset_home" \
+  SUPERSET_PORT=8088
+
+# Set working directory
+WORKDIR /app
+
+# Update & Install Dependencies - let's check what PostgreSQL versions are available
+RUN apk update --no-cache && \
+  # List available PostgreSQL packages to find the correct version
+  apk search postgresql && \
+  apk add --no-cache \
+  python-3.11 \
+  py3.11-pip \
+  python-3.11-dev \
+  build-base \
+  bash \
+  make \
+  tzdata \
+  curl \
+  wget \
+  postgresql-client
+
+# Try to install PostgreSQL dev packages if they exist
+RUN apk add --no-cache postgresql-dev || echo "Using default PostgreSQL development libraries"
+
+# Create Superset user and directories
+RUN mkdir -p ${SUPERSET_HOME} && \
+  adduser -D -h ${SUPERSET_HOME} superset && \
+  chown -R superset:superset ${SUPERSET_HOME}
+
+# Copy build artifacts
+COPY --from=build --chown=superset:superset /app /app
+
+# Updated run-server.sh path
+COPY --from=build --chown=superset:superset /usr/bin/run-server.sh /usr/bin/run-server.sh
+RUN chmod +x /usr/bin/run-server.sh
+
+# Copy pythonpath and assets
+RUN mkdir -p /app/pythonpath
+COPY --chown=superset:superset ./docker/pythonpath/* /app/pythonpath/
+COPY --from=build --chown=superset:superset /app/superset/static/assets /app/superset/static/assets
+
+
+# Install virtualenv and Python requirements in a virtual environment
+RUN pip3.11 install virtualenv && \
+  virtualenv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Install base Python packages and ensure psycopg2 works
+RUN pip3.11 install --upgrade pip setuptools wheel gunicorn flask-cors && \
+  pip3.11 install -r requirements/base.txt && \
+  # Install psycopg2-binary which works without PostgreSQL dev packages
+  pip3.11 install psycopg2-binary && \
+  # Run a quick test to verify psycopg2 installation
+  python -c "import psycopg2; print(f'Successfully installed psycopg2 {psycopg2.__version__}')"
+
+# Install Dockerize & Geckodriver
+ENV DOCKERIZE_VERSION=v0.7.0
+ENV GECKODRIVER_VERSION=0.29.0
+RUN wget -qO- "https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz" | tar xzf - -C /usr/local/bin && \
+  wget -q "https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VERSION}/geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz" && \
+  tar -xzf geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz -C /usr/bin geckodriver && \
+  chmod +x /usr/bin/geckodriver && \
+  rm -rf geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz 
+
+# Switch to non-root Superset user
+USER superset
+
+# Healthcheck
+HEALTHCHECK CMD curl -f "http://localhost:${SUPERSET_PORT}/health" || exit 1
+
+# Expose the application port
+EXPOSE ${SUPERSET_PORT}
+
+# Start Superset server (expecting SECRET_KEY to be provided at runtime)
+CMD ["/usr/bin/run-server.sh"]
+
