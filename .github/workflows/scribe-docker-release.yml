@@ -143,7 +143,12 @@ jobs:
           # Step 2: Verify the base image
           docker images | grep superset-base
           
-          # Step 3: Build the Wolfi image using the local base
+          # Step 3: Copy wolfi/docker/pythonpath to docker/pythonpath for Dockerfile.wolfie
+          echo "Preparing pythonpath files..."
+          mkdir -p docker/pythonpath
+          cp wolfi/docker/pythonpath/* docker/pythonpath/
+          
+          # Step 4: Build the Wolfi image using the local base
           echo "Building Wolfi image..."
           docker build -t scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} \
             -f wolfi/Dockerfile.wolfie \

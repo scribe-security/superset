@@ -29,8 +29,13 @@ docker build -t superset-base:local -f Dockerfile --target lean \
 echo -e "${YELLOW}Step 2: Verifying base image...${NC}"
 docker images | grep superset-base
 
-# Step 3: Build the Wolfi image using the local base
-echo -e "${YELLOW}Step 3: Building Wolfi image...${NC}"
+# Step 3: Copy wolfi/docker/pythonpath to docker/pythonpath for Dockerfile.wolfie
+echo -e "${YELLOW}Step 3: Preparing pythonpath files...${NC}"
+mkdir -p docker/pythonpath
+cp wolfi/docker/pythonpath/* docker/pythonpath/
+
+# Step 4: Build the Wolfi image using the local base
+echo -e "${YELLOW}Step 4: Building Wolfi image...${NC}"
 docker build -t scribesecurity/superset:$BRANCH_NAME-$RELEASE_INDEX-wolfi-$PLATFORM \
   -f wolfi/Dockerfile.wolfie \
   --build-arg BASE_IMAGE=superset-base:local .
