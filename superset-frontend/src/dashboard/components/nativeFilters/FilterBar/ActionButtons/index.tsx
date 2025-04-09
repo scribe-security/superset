@@ -64,7 +64,7 @@ const verticalStyle = (theme: SupersetTheme, width: number) => css`
 
   padding: ${theme.gridUnit * 4}px;
   padding-top: ${theme.gridUnit * 6}px;
-  border-bottom: solid 1px #d9d9d9;
+  border-bottom: solid 1px ${theme.colors.secondary.light2};
 
   // background: linear-gradient(
   //   ${rgba(theme.colors.grayscale.light5, 0)},

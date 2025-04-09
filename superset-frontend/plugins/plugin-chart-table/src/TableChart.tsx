@@ -852,10 +852,10 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                   valueRange,
                   alignPositiveNegative,
                 })}%`};
-                background-color: ${cellBackground({
-                  value: value as number,
-                  colorPositiveNegative,
-                })};
+                  background-color: ${cellBackground({
+                    value: value as number,
+                    colorPositiveNegative,
+                  })};
               `}
           `;
 
@@ -967,7 +967,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                   <Tooltip
                     overlayInnerStyle={{
                       borderRadius: '5px',
-                      padding: '15px',
+                      padding: '8px',
                     }}
                     color="#214887"
                     placement="top"
