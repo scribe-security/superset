@@ -54,16 +54,17 @@ const verticalStyle = (theme: SupersetTheme, width: number) => css`
   flex-direction: row;
   align-items: center;
   pointer-events: none;
-  position: fixed;
+  // position: fixed;
   z-index: 100;
   justify-content: space-between;
 
   // filter bar width minus 1px for border
   width: ${width - 1}px;
-  top: 60px;
+  // top: 60px;
 
   padding: ${theme.gridUnit * 4}px;
   padding-top: ${theme.gridUnit * 6}px;
+  border-bottom: solid 1px #d9d9d9;
 
   // background: linear-gradient(
   //   ${rgba(theme.colors.grayscale.light5, 0)},

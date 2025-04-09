@@ -72,7 +72,7 @@ const Bar = styled.div<{ width: number }>`
     min-height: 100%;
     border-radius: 6px;
     border: solid 1px #d9d9d9;
-    position:fixed;
+    // position:fixed;
     display: none;
     &.open {
       display: flex;
@@ -121,7 +121,7 @@ const FilterBarEmptyStateContainer = styled.div`
 const FilterControlsWrapper = styled.div`
   padding: ${({ theme }) => theme.gridUnit * 4}px;
   // 108px padding to make room for buttons with position: absolute
-  padding-bottom: ${({ theme }) => theme.gridUnit * 27}px;
+  // padding-bottom: ${({ theme }) => theme.gridUnit * 27}px;
 `;
 
 export const FilterBarScrollContext = createContext(false);
@@ -170,7 +170,6 @@ const VerticalFilterBar: FC<VerticalBarProps> = ({
       overflow: 'auto',
       height,
       overscrollBehavior: 'contain',
-      marginTop: '29px',
     }),
     [height],
   );
@@ -234,6 +233,7 @@ const VerticalFilterBar: FC<VerticalBarProps> = ({
         </CollapsedBar>
         <Bar className={cx({ open: filtersOpen }, 'Bar')} width={width}>
           <Header toggleFiltersBar={toggleFiltersBar} />
+          {actions}
           {!isInitialized ? (
             <div css={{ height }}>
               <Loading />
@@ -246,7 +246,6 @@ const VerticalFilterBar: FC<VerticalBarProps> = ({
               </>
             </div>
           )}
-          {actions}
         </Bar>
       </BarWrapper>
     </FilterBarScrollContext.Provider>
