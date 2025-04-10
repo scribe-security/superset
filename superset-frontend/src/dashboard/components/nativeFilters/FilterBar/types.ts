@@ -55,7 +55,6 @@ export interface FiltersBarProps {
 export type HorizontalBarProps = CommonFiltersBarProps & {
   dashboardId: number;
 };
-
 export type VerticalBarProps = Omit<FiltersBarProps, 'orientation'> &
   CommonFiltersBarProps &
   VerticalBarConfig;

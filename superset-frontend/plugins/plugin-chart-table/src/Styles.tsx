@@ -82,6 +82,18 @@ export default styled.div`
       float: right;
     }
 
+    .fill-available-width {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      display: inline-block;
+      max-width: -webkit-fill-available;
+      max-width: -moz-available;
+      max-width: stretch;
+      max-width: fill-available;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
     .dt-truncate-cell {
       overflow: hidden;
       text-overflow: ellipsis;

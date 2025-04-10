@@ -927,7 +927,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                     style={{
                       textOverflow: 'ellipsis',
                       ...(columnWidth
-                        ? { width: `${columnWidth}vw` }
+                        ? { minWidth: `${columnWidth}vw` }
                         : undefined),
                     }}
                     dangerouslySetInnerHTML={html}
@@ -974,15 +974,8 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                     title={text}
                   >
                     <div
-                      style={{
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden',
-                        display: 'inline-block',
-                        maxWidth: '-webkit-fill-available',
-                        ...(columnWidth
-                          ? { width: `${columnWidth}vw` }
-                          : undefined),
-                      }}
+                      className="fill-available-width"
+                      style={columnWidth ? { width: 'min-content' } : undefined}
                     >
                       {text}
                     </div>

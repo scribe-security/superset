@@ -69,7 +69,7 @@ const StyledContainer = styled.div`
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: space
     width: 100%;
     max-width: ${MAX_ADVISABLE_VIZ_GALLERY_WIDTH}px;
     max-height: calc(100vh - ${ESTIMATED_NAV_HEIGHT}px);
