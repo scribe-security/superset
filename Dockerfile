@@ -95,6 +95,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
       build-essential \
     && pip install --upgrade setuptools pip \
     && pip install -r requirements/base.txt \
+    && pip install boto3==1.34.24 \
     && apt-get autoremove -yqq --purge build-essential \
     && rm -rf /var/lib/apt/lists/*
 

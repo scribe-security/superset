@@ -142,11 +142,7 @@ jobs:
 
           # Step 2: Verify the base image
           docker images | grep superset-base
-           echo "Installing boto3..."
-          # Try a few different methods to install boto3
-          docker run --name temp-superset superset-base:local sh -c 'pip install boto3==1.34.24 || pip3 install boto3==1.34.24 || python -m pip install boto3==1.34.24 || python3 -m pip install boto3==1.34.24'
-          docker commit temp-superset superset-base:local
-          docker rm temp-superset
+          # boto3 is now installed during Docker build in the Dockerfile
 
           # Step 3: Copy wolfi/docker/pythonpath to docker/pythonpath for Dockerfile.wolfie
           echo "Preparing pythonpath files..."
@@ -163,12 +159,19 @@ jobs:
           echo "Pushing Wolfi image to Docker Hub..."
           docker push scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
 
-          # Step 5: Also tag it with the branch version if on the target branch
+          # Step 5: Always create both specific version tag and generic tag
+          # First the specific version tag with release index
+          specific_tag=scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
+          docker tag scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} $specific_tag
+          docker push $specific_tag
+          echo "Pushed specific tag: $specific_tag"
+
+          # Then the generic tag without release index (if on the target branch)
           if [ "${{ github.ref_name }}" = "4.1.2-to-wolfie" ]; then
-            wolfi_tag=scribesecurity/superset:4.1.2-to-wolfie-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-            docker tag scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} $wolfi_tag
-            docker push $wolfi_tag
-            echo "Also pushed $wolfi_tag"
+            generic_tag=scribesecurity/superset:4.1.2-to-wolfie-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
+            docker tag scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} $generic_tag
+            docker push $generic_tag
+            echo "Also pushed generic tag: $generic_tag"
           fi
 
       - name: Print version info
