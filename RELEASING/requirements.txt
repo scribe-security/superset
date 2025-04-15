@@ -17,3 +17,5 @@
 
 cherrytree
 jinja2
+boto3==1.34.0 
+
