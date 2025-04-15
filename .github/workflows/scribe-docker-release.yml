@@ -143,7 +143,7 @@ jobs:
           # Step 2: Verify the base image
           docker images | grep superset-base
            echo "Installing boto3..."
-          docker run --name temp-superset superset-base:local pip install boto3==1.34.24
+          docker run --name temp-superset superset-base:local sh -c 'source ./venv/bin/activate && pip install boto3==1.34.24'
           docker commit temp-superset superset-base:local
           docker rm temp-superset
 
