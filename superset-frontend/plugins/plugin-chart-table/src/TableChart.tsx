@@ -655,7 +655,8 @@ export default function TableChart<D extends DataRecord = DataRecord>(
       <tr
         css={css`
           th {
-            border-right: 2px solid ${theme.colors.grayscale.light2};
+            // border-right: 2px solid ${theme.colors.grayscale.light2};
+            border-right: none;
           }
           th:first-child {
             border-left: none;
