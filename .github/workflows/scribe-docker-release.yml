@@ -43,7 +43,7 @@ jobs:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          pip install click
+          pip install click boto3
           ./scripts/build_docker.py \
             ${{ matrix.build_preset }} \
             "release" \
@@ -139,25 +139,29 @@ jobs:
           echo "Building base image..."
           docker build -t superset-base:local -f Dockerfile --target lean \
             --build-arg PY_VER=3.11-slim-bookworm .
-          
+
           # Step 2: Verify the base image
           docker images | grep superset-base
-          
+           echo "Installing boto3..."
+          docker run --name temp-superset superset-base:local pip install boto3==1.34.24
+          docker commit temp-superset superset-base:local
+          docker rm temp-superset
+
           # Step 3: Copy wolfi/docker/pythonpath to docker/pythonpath for Dockerfile.wolfie
           echo "Preparing pythonpath files..."
           mkdir -p docker/pythonpath
           cp wolfi/docker/pythonpath/* docker/pythonpath/
-          
+
           # Step 4: Build the Wolfi image using the local base
           echo "Building Wolfi image..."
           docker build -t scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} \
             -f wolfi/Dockerfile.wolfie \
             --build-arg BASE_IMAGE=superset-base:local .
-          
+
           # Step 4: Push the Wolfi image to Docker Hub
           echo "Pushing Wolfi image to Docker Hub..."
           docker push scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-          
+
           # Step 5: Also tag it with the branch version if on the target branch
           if [ "${{ github.ref_name }}" = "4.1.2-to-wolfie" ]; then
             wolfi_tag=scribesecurity/superset:4.1.2-to-wolfie-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
