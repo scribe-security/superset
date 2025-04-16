@@ -126,7 +126,8 @@ export default styled.div`
     }
 
     .right-border-only {
-      border-right: 2px solid ${theme.colors.grayscale.light2};
+      // border-right: 2px solid ${theme.colors.grayscale.light2};
+      border-right: none;
     }
     table .right-border-only:last-child {
       border-right: none;

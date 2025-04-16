@@ -50,14 +50,6 @@ const Loader: FC<Props> = ({
 
       // Set position flag (large parent) - only if parent is twice larger than viewport
       setIsParentLarger(parentHeight > viewportHeight + 300);
-      console.log(
-        'parentHeight',
-        parentHeight,
-        'viewportHeight',
-        viewportHeight,
-        'isParentLarger',
-        isParentLarger,
-      );
       // Determine size based on parent dimensions
       if (
         parentHeight > viewportHeight - 200 ||
