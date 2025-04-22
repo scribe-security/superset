@@ -187,54 +187,179 @@ jobs:
 
       - name: Create manifest
         run: |
+          set -e  # Fail on any error
+          
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-
+          MANIFEST_TAG="${BASE_TAG}-${{ matrix.variant == 'base' && env.PY_VERSION || 'wolfi' }}"
+          
+          echo "Creating manifest for $MANIFEST_TAG..."
+          
+          # Function to safely extract digest from a manifest list
+          extract_digest() {
+            local image_tag="$1"
+            local platform="$2"
+            local fallback="$3"
+            local max_attempts=3
+            local attempt=1
+            local timeout=30
+            
+            echo "Inspecting image: $image_tag for platform $platform"
+            
+            # Check if image exists
+            if ! docker pull "$image_tag" &>/dev/null; then
+              echo "ERROR: Image $image_tag not found!"
+              return 1
+            fi
+            
+            # Check if image is a manifest list
+            local image_type
+            image_type=$(docker buildx imagetools inspect "$image_tag" 2>/dev/null | grep -c "MediaType: application\/vnd.oci.image.index" || echo "0")
+            
+            if [ "$image_type" -eq "0" ]; then
+              # Not a manifest list, can use directly
+              echo "Image is not a manifest list, using as is"
+              echo "$image_tag"
+              return 0
+            fi
+            
+            # It's a manifest list, need to extract the digest for specific platform
+            while [ $attempt -le $max_attempts ]; do
+              echo "Attempt $attempt of $max_attempts to extract digest..."
+              
+              # For base images, use different format logic than wolfi
+              if [[ "$image_tag" == *"-py"* ]]; then
+                # Extract digest using platform filter - works for base images
+                local digest
+                digest=$(docker buildx imagetools inspect --format='{{range .Manifests}}{{if eq .Platform.OS "linux"}}{{if eq .Platform.Architecture "'$platform'"}}{{.Digest}}{{end}}{{end}}{{end}}' "$image_tag" 2>/dev/null)
+                
+                if [ -n "$digest" ]; then
+                  echo "$image_tag@$digest"
+                  return 0
+                fi
+              else
+                # Extract the first manifest which should be the image (not attestation)
+                local digest
+                digest=$(docker buildx imagetools inspect "$image_tag" --format '{{(index .Manifests 0).Digest}}' 2>/dev/null)
+                
+                if [ -n "$digest" ]; then
+                  echo "$image_tag@$digest"
+                  return 0
+                fi
+              fi
+              
+              echo "Digest extraction failed, retrying in 5 seconds..."
+              sleep 5
+              attempt=$((attempt+1))
+            done
+            
+            if [ -n "$fallback" ]; then
+              echo "WARNING: Using fallback image $fallback after $max_attempts failed attempts"
+              echo "$fallback"
+              return 0
+            else
+              echo "ERROR: Failed to extract digest after $max_attempts attempts"
+              return 1
+            fi
+          }
+          
+          # Function to safely create and push a manifest
+          create_and_push_manifest() {
+            local manifest_tag="$1"
+            local amd_ref="$2"
+            local arm_ref="$3"
+            local max_attempts=3
+            local attempt=1
+            
+            # Try to delete existing manifest if it exists
+            docker manifest rm "$manifest_tag" 2>/dev/null || true
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "Attempt $attempt of $max_attempts to create manifest..."
+              
+              if docker manifest create --amend "$manifest_tag" "$amd_ref" "$arm_ref"; then
+                echo "Manifest created successfully!"
+                
+                # Now try to push the manifest
+                if docker manifest push "$manifest_tag"; then
+                  echo "Manifest pushed successfully!"
+                  return 0
+                else
+                  echo "Push failed, retrying..."
+                fi
+              else
+                echo "Manifest creation failed, retrying..."
+              fi
+              
+              # Remove any partial manifest before retrying
+              docker manifest rm "$manifest_tag" 2>/dev/null || true
+              
+              attempt=$((attempt+1))
+              sleep 5
+            done
+            
+            echo "ERROR: Failed to create and push manifest after $max_attempts attempts"
+            return 1
+          }
+          
           if [ "${{ matrix.variant }}" = "base" ]; then
-            MANIFEST_TAG="${BASE_TAG}-${{ env.PY_VERSION }}"
+            # For base images
+            AMD_TAG="${MANIFEST_TAG}-amd64"
+            ARM_TAG="${MANIFEST_TAG}-arm64"
             
-            # Check if the images exist
-            echo "Checking if images exist before creating manifest..."
-            docker pull $MANIFEST_TAG-amd64 || (echo "Warning: $MANIFEST_TAG-amd64 not found" && exit 1)
-            docker pull $MANIFEST_TAG-arm64 || (echo "Warning: $MANIFEST_TAG-arm64 not found" && exit 1)
+            # For base images we can use direct references as they're not manifest lists
+            AMD_REFERENCE="$AMD_TAG"
+            ARM_REFERENCE="$ARM_TAG"
             
-            # Create manifest with specific inspect for each architecture
-            echo "Creating manifest for base image..."
-            docker manifest create $MANIFEST_TAG \
-              --amend $MANIFEST_TAG-amd64 \
-              --amend $MANIFEST_TAG-arm64
+            echo "Using direct references for base images"
           else
-            MANIFEST_TAG="${BASE_TAG}-wolfi"
-            
-            # For Wolfi images, determine the correct architecture tags
+            # For Wolfi images
             AMD_TAG="${MANIFEST_TAG}-amd"
             ARM_TAG="${MANIFEST_TAG}-arm"
             
-            # Verify the images exist and aren't themselves manifest lists
-            echo "Checking wolfi architecture images..."
-            docker buildx imagetools inspect $AMD_TAG || (echo "Warning: $AMD_TAG not found or is already a manifest list" && exit 1)
-            docker buildx imagetools inspect $ARM_TAG || (echo "Warning: $ARM_TAG not found or is already a manifest list" && exit 1)
+            # Extract digests from manifest lists
+            echo "Extracting platform-specific digests from manifest lists..."
+            AMD_REFERENCE=$(extract_digest "$AMD_TAG" "amd64")
+            ARM_REFERENCE=$(extract_digest "$ARM_TAG" "arm64")
             
-            # Create the manifest for wolfi image
-            echo "Creating manifest for wolfi image..."
-            docker manifest create --amend $MANIFEST_TAG $AMD_TAG $ARM_TAG
+            # Verify extraction success
+            if [ -z "$AMD_REFERENCE" ] || [ -z "$ARM_REFERENCE" ]; then
+              echo "ERROR: Failed to extract required digests."
+              exit 1
+            fi
             
-            # Create branch-specific manifest if needed
-            if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
-              BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
-              
-              # Verify the branch-specific images exist
-              AMD_BRANCH_TAG="${BRANCH_TAG}-amd"
-              ARM_BRANCH_TAG="${BRANCH_TAG}-arm"
-              
-              echo "Creating branch-specific manifest..."
-              docker manifest create --amend $BRANCH_TAG $AMD_BRANCH_TAG $ARM_BRANCH_TAG
-              docker manifest push $BRANCH_TAG
+            # Log the extracted references
+            echo "AMD Reference: $AMD_REFERENCE"
+            echo "ARM Reference: $ARM_REFERENCE"
+          fi
+          
+          # Create and push the main manifest
+          echo "Creating and pushing manifest for $MANIFEST_TAG..."
+          if ! create_and_push_manifest "$MANIFEST_TAG" "$AMD_REFERENCE" "$ARM_REFERENCE"; then
+            echo "ERROR: Failed to create main manifest"
+            exit 1
+          fi
+          
+          # Create branch-specific manifest if needed
+          if [ "${{ matrix.variant }}" = "wolfi" ] && [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+            BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
+            
+            # Verify the branch-specific images exist
+            AMD_BRANCH_TAG="${BRANCH_TAG}-amd"
+            ARM_BRANCH_TAG="${BRANCH_TAG}-arm"
+            
+            echo "Creating branch-specific manifest..."
+            AMD_BRANCH_REFERENCE=$(extract_digest "$AMD_BRANCH_TAG" "amd64")
+            ARM_BRANCH_REFERENCE=$(extract_digest "$ARM_BRANCH_TAG" "arm64")
+            
+            if [ -n "$AMD_BRANCH_REFERENCE" ] && [ -n "$ARM_BRANCH_REFERENCE" ]; then
+              echo "Creating and pushing branch-specific manifest..."
+              if ! create_and_push_manifest "$BRANCH_TAG" "$AMD_BRANCH_REFERENCE" "$ARM_BRANCH_REFERENCE"; then
+                echo "WARNING: Failed to create branch-specific manifest, but continuing"
+              fi
+            else
+              echo "WARNING: Could not extract branch tag digests. Skipping branch manifest creation."
             fi
           fi
-
-          # Push the main manifest
-          echo "Pushing manifest: $MANIFEST_TAG"
-          docker manifest push $MANIFEST_TAG
 
   validate:
     name: Validate Images
