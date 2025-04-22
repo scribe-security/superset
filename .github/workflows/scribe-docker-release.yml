@@ -191,25 +191,49 @@ jobs:
 
           if [ "${{ matrix.variant }}" = "base" ]; then
             MANIFEST_TAG="${BASE_TAG}-${{ env.PY_VERSION }}"
+            
+            # Check if the images exist
+            echo "Checking if images exist before creating manifest..."
+            docker pull $MANIFEST_TAG-amd64 || (echo "Warning: $MANIFEST_TAG-amd64 not found" && exit 1)
+            docker pull $MANIFEST_TAG-arm64 || (echo "Warning: $MANIFEST_TAG-arm64 not found" && exit 1)
+            
+            # Create manifest with specific inspect for each architecture
+            echo "Creating manifest for base image..."
             docker manifest create $MANIFEST_TAG \
               --amend $MANIFEST_TAG-amd64 \
               --amend $MANIFEST_TAG-arm64
           else
             MANIFEST_TAG="${BASE_TAG}-wolfi"
-            docker manifest create $MANIFEST_TAG \
-              --amend $MANIFEST_TAG-amd \
-              --amend $MANIFEST_TAG-arm
             
-            # Create branch-specific manifest
+            # For Wolfi images, determine the correct architecture tags
+            AMD_TAG="${MANIFEST_TAG}-amd"
+            ARM_TAG="${MANIFEST_TAG}-arm"
+            
+            # Verify the images exist and aren't themselves manifest lists
+            echo "Checking wolfi architecture images..."
+            docker buildx imagetools inspect $AMD_TAG || (echo "Warning: $AMD_TAG not found or is already a manifest list" && exit 1)
+            docker buildx imagetools inspect $ARM_TAG || (echo "Warning: $ARM_TAG not found or is already a manifest list" && exit 1)
+            
+            # Create the manifest for wolfi image
+            echo "Creating manifest for wolfi image..."
+            docker manifest create --amend $MANIFEST_TAG $AMD_TAG $ARM_TAG
+            
+            # Create branch-specific manifest if needed
             if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
               BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
-              docker manifest create $BRANCH_TAG \
-                --amend $BRANCH_TAG-amd \
-                --amend $BRANCH_TAG-arm
+              
+              # Verify the branch-specific images exist
+              AMD_BRANCH_TAG="${BRANCH_TAG}-amd"
+              ARM_BRANCH_TAG="${BRANCH_TAG}-arm"
+              
+              echo "Creating branch-specific manifest..."
+              docker manifest create --amend $BRANCH_TAG $AMD_BRANCH_TAG $ARM_BRANCH_TAG
               docker manifest push $BRANCH_TAG
             fi
           fi
 
+          # Push the main manifest
+          echo "Pushing manifest: $MANIFEST_TAG"
           docker manifest push $MANIFEST_TAG
 
   validate:
