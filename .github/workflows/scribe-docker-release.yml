@@ -71,10 +71,9 @@ jobs:
               # When building both, use the registry-tagged base image
               BUILD_ARGS="BASE_IMAGE=${BASE_TAG}-${{ env.PY_VERSION }}"
             else
-              # When building Wolfi only, use a unique local tag
-              BASE_LOCAL_TAG="superset-base-local:${{ github.run_id }}"
-              BUILD_ARGS="BASE_IMAGE=${BASE_LOCAL_TAG}"
-              echo "base_local_tag=${BASE_LOCAL_TAG}" >> $GITHUB_OUTPUT
+              # When building Wolfi only, modify Dockerfile to use python:3.11-slim-bookworm directly
+              BUILD_ARGS=""
+              NEEDS_DOCKERFILE_PATCH="true"
             fi
           fi
 
@@ -84,21 +83,7 @@ jobs:
           echo "target=$TARGET" >> $GITHUB_OUTPUT
           echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
           echo "arch_tag=$ARCH_TAG" >> $GITHUB_OUTPUT
-
-      - name: Build local base (Wolfi standalone only)
-        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          target: lean
-          platforms: ${{ matrix.platform }}
-          build-args: PY_VER=${{ env.PY_VER_ARG }}
-          tags: ${{ steps.prep.outputs.base_local_tag }}
-          push: false
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          echo "needs_dockerfile_patch=$NEEDS_DOCKERFILE_PATCH" >> $GITHUB_OUTPUT
 
       - name: Prepare Wolfi files
         if: ${{ matrix.variant == 'wolfi' }}
@@ -106,11 +91,18 @@ jobs:
           mkdir -p docker/pythonpath
           cp wolfi/docker/pythonpath/* docker/pythonpath/ || true
 
+      - name: Patch Dockerfile for standalone Wolfi build
+        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
+        run: |
+          # Create a patched Dockerfile that uses python:3.11-slim-bookworm directly instead of ARG
+          sed 's/FROM ${BASE_IMAGE} AS build/FROM python:3.11-slim-bookworm AS build/' wolfi/Dockerfile.wolfie > wolfi/Dockerfile.wolfie.patched
+          echo "Using patched Dockerfile for standalone Wolfi build"
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ steps.prep.outputs.dockerfile }}
+          file: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' && 'wolfi/Dockerfile.wolfie.patched' || steps.prep.outputs.dockerfile }}
           push: true
           platforms: ${{ matrix.platform }}
           tags: ${{ steps.prep.outputs.tags }}
