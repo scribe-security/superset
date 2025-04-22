@@ -195,37 +195,6 @@ jobs:
           
           echo "Creating manifest for $MANIFEST_TAG..."
           
-          # Function to safely create and push a manifest
-          create_and_push_manifest() {
-            local manifest_tag="$1"
-            local amd_ref="$2"
-            local arm_ref="$3"
-            
-            echo "Creating manifest: $manifest_tag with:"
-            echo "  AMD image: $amd_ref"
-            echo "  ARM image: $arm_ref"
-            
-            # Try to delete existing manifest if it exists
-            docker manifest rm "$manifest_tag" 2>/dev/null || true
-            
-            # Simple direct creation approach - more reliable
-            if docker manifest create "$manifest_tag" "$amd_ref" "$arm_ref"; then
-              echo "Manifest created successfully!"
-              
-              # Push the manifest
-              if docker manifest push "$manifest_tag"; then
-                echo "Manifest pushed successfully!"
-                return 0
-              else
-                echo "Failed to push manifest"
-                return 1
-              fi
-            else
-              echo "Failed to create manifest"
-              return 1
-            fi
-          }
-          
           # Get platform-specific images
           if [ "${{ matrix.variant }}" = "base" ]; then
             # Base image tags
@@ -242,68 +211,117 @@ jobs:
           docker pull $AMD_IMAGE || { echo "AMD image not found: $AMD_IMAGE"; exit 1; }
           docker pull $ARM_IMAGE || { echo "ARM image not found: $ARM_IMAGE"; exit 1; }
           
-          # Create and push the manifest
-          echo "Creating manifest with direct image references..."
-          if ! create_and_push_manifest "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"; then
-            # If direct approach fails, try with specific manifests
-            echo "Direct manifest creation failed, trying alternative approach..."
+          # Clean any existing manifest
+          echo "Cleaning existing manifest..."
+          docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
+          
+          # Approach for when images are already manifest lists
+          if [ "${{ matrix.variant }}" = "wolfi" ]; then
+            # For Wolfi images, extract digests from manifest lists
+            echo "Extracting platform-specific digests for Wolfi images..."
             
-            # Try to extract manifest digests
-            if [ "${{ matrix.variant }}" = "wolfi" ]; then
-              # For Wolfi images that might be manifest lists themselves
-              echo "Analyzing Wolfi images for correct references..."
+            # Print image details for debugging
+            echo "AMD image details:"
+            docker buildx imagetools inspect "$AMD_IMAGE"
+            
+            echo "ARM image details:"
+            docker buildx imagetools inspect "$ARM_IMAGE"
+            
+            # Instead of using --format which requires experimental features,
+            # extract specific digests using grep and awk
+            echo "Extracting digests without requiring experimental features..."
+            
+            # Extract AMD digest using grep and awk from the inspection output
+            AMD_INSPECTION=$(docker buildx imagetools inspect "$AMD_IMAGE")
+            
+            # Try to get direct URLs
+            AMD_URL=$(echo "$AMD_INSPECTION" | grep -A 3 "Platform:    linux/amd64" | grep "Name:" | awk '{print $2}')
+            
+            # Extract ARM digest using grep and awk from the inspection output
+            ARM_INSPECTION=$(docker buildx imagetools inspect "$ARM_IMAGE")
+            ARM_URL=$(echo "$ARM_INSPECTION" | grep -A 3 "Platform:    linux/arm64" | grep "Name:" | awk '{print $2}')
+            
+            if [ -n "$AMD_URL" ] && [ -n "$ARM_URL" ]; then
+              echo "Creating manifest with full URLs:"
+              echo "AMD URL: $AMD_URL"
+              echo "ARM URL: $ARM_URL"
               
-              # Print image details for debugging
-              echo "AMD image details:"
-              docker buildx imagetools inspect "$AMD_IMAGE" || true
+              # Create manifest with direct URLs to specific platform manifests
+              docker manifest create "$MANIFEST_TAG" "$AMD_URL" "$ARM_URL"
+=======
+        
+            # Try creating manifest directly with full URLs extracted from the output
+            # Extract the full URLs from inspect output that contain the specific manifests
+            AMD_URL=$(echo "$AMD_INSPECTION" | grep -A 3 "Platform:    linux/amd64" | grep "Name:" | awk '{print $2}')
+            ARM_URL=$(echo "$ARM_INSPECTION" | grep -A 3 "Platform:    linux/arm64" | grep "Name:" | awk '{print $2}')
+            
+            if [ -n "$AMD_URL" ] && [ -n "$ARM_URL" ]; then
+              echo "Creating manifest with full URLs:"
+              echo "AMD URL: $AMD_URL"
+              echo "ARM URL: $ARM_URL"
               
-              echo "ARM image details:"
-              docker buildx imagetools inspect "$ARM_IMAGE" || true
-              
-              # Create the manifest with explicit annotation of platforms
-              echo "Creating manifest with platform specifications..."
-              docker manifest create "$MANIFEST_TAG" \
-                --amend "$AMD_IMAGE" --platform linux/amd64 \
-                --amend "$ARM_IMAGE" --platform linux/arm64
-                
-              # Push the manifest
-              if docker manifest push "$MANIFEST_TAG"; then
-                echo "Alternative approach succeeded!"
-              else
-                echo "All approaches failed."
-                exit 1
-              fi
+              docker manifest create "$MANIFEST_TAG" "$AMD_URL" "$ARM_URL"
             else
-              echo "Failed to create manifest for base image"
+              echo "Could not extract digests, falling back to simple approach..."
+              docker manifest create "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"
+            fi
+          else
+            # For base images, use direct references
+            echo "Creating manifest for base image using direct references..."
+            docker manifest create "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"
+          fi
+          
+          # Push the manifest
+          echo "Pushing manifest..."
+          if ! docker manifest push "$MANIFEST_TAG"; then
+            echo "Failed to push manifest. Trying alternative approach..."
+            
+            # Clean and try again with a simpler approach
+            docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
+            docker manifest create "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"
+            
+            if ! docker manifest push "$MANIFEST_TAG"; then
+              echo "All approaches failed. Exiting with error."
               exit 1
             fi
+          else
+            echo "Successfully pushed manifest: $MANIFEST_TAG"
           fi
           
           # Create branch-specific manifest if needed
           if [ "${{ matrix.variant }}" = "wolfi" ] && [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
             BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
-            
             AMD_BRANCH_IMAGE="${BRANCH_TAG}-amd"
             ARM_BRANCH_IMAGE="${BRANCH_TAG}-arm"
             
             echo "Creating branch-specific manifest ($BRANCH_TAG)..."
+            docker manifest rm "$BRANCH_TAG" 2>/dev/null || true
             
-            # Try simple approach first
-            if ! create_and_push_manifest "$BRANCH_TAG" "$AMD_BRANCH_IMAGE" "$ARM_BRANCH_IMAGE"; then
-              # Try alternative approach
-              echo "Using alternative approach for branch manifest..."
-              docker manifest create "$BRANCH_TAG" \
-                --amend "$AMD_BRANCH_IMAGE" --platform linux/amd64 \
-                --amend "$ARM_BRANCH_IMAGE" --platform linux/arm64
-                
-              if ! docker manifest push "$BRANCH_TAG"; then
-                echo "WARNING: Failed to create branch manifest, but continuing"
-              fi
+            # Extract branch-specific URLs using grep/awk (without experimental features)
+            AMD_BRANCH_INSPECTION=$(docker buildx imagetools inspect "$AMD_BRANCH_IMAGE")
+            ARM_BRANCH_INSPECTION=$(docker buildx imagetools inspect "$ARM_BRANCH_IMAGE")
+            
+            AMD_BRANCH_URL=$(echo "$AMD_BRANCH_INSPECTION" | grep -A 3 "Platform:    linux/amd64" | grep "Name:" | awk '{print $2}')
+            ARM_BRANCH_URL=$(echo "$ARM_BRANCH_INSPECTION" | grep -A 3 "Platform:    linux/arm64" | grep "Name:" | awk '{print $2}')
+            
+            if [ -n "$AMD_BRANCH_URL" ] && [ -n "$ARM_BRANCH_URL" ]; then
+              echo "Creating branch manifest with direct URLs..."
+              echo "AMD Branch URL: $AMD_BRANCH_URL"
+              echo "ARM Branch URL: $ARM_BRANCH_URL"
+              
+              docker manifest create "$BRANCH_TAG" "$AMD_BRANCH_URL" "$ARM_BRANCH_URL"
+            else
+              echo "Falling back to simple approach for branch manifest..."
+              docker manifest create "$BRANCH_TAG" "$AMD_BRANCH_IMAGE" "$ARM_BRANCH_IMAGE"
+            fi
+            
+            # Push branch manifest
+            if ! docker manifest push "$BRANCH_TAG"; then
+              echo "Warning: Failed to push branch manifest, but continuing..."
+            else
+              echo "Successfully pushed branch manifest: $BRANCH_TAG"
             fi
           fi
-          
-          # Final success message
-          echo "Manifest creation completed for $MANIFEST_TAG"
 
   validate:
     name: Validate Images
