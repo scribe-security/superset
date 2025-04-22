@@ -10,13 +10,16 @@ if ! command -v act &> /dev/null; then
     exit 1
 fi
 
-# Create a secrets file for testing
+# Navigate to root directory FIRST
+cd ..
+
+# Create a secrets file for testing in the root directory
 cat > .github-act-secrets <<EOF
 DOCKERHUB_USER=testuser
 DOCKERHUB_TOKEN=testtoken
 EOF
 
-# Create event payload for workflow_dispatch
+# Create event payload for workflow_dispatch in the root directory
 cat > .github-act-event.json <<EOF
 {
   "action": "workflow_dispatch",
@@ -26,9 +29,6 @@ cat > .github-act-event.json <<EOF
   }
 }
 EOF
-
-# Navigate to root directory
-cd ..
 
 # Test the workflow
 echo "Testing Scribe Docker Release workflow..."
