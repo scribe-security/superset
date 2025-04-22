@@ -113,8 +113,6 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          add-hosts: |
-            localhost:host-gateway
 
       - name: Verify local registry
         if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
@@ -142,8 +140,6 @@ jobs:
           build-args: ${{ steps.prep.outputs.build_args }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          add-hosts: |
-            localhost:host-gateway
 
       - name: Stop local registry
         if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
