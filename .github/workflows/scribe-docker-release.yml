@@ -66,13 +66,15 @@ jobs:
               TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi-${ARCH_TAG}"
             fi
             
-            # Set base image for Wolfi - use local image tag
+            # Set base image for Wolfi
             if [ "${{ inputs.build_type }}" = "both" ]; then
               # When building both, use the registry-tagged base image
               BUILD_ARGS="BASE_IMAGE=${BASE_TAG}-${{ env.PY_VERSION }}"
             else
-              # When building Wolfi only, use the local dev image
-              BUILD_ARGS="BASE_IMAGE=apache/superset:dev"
+              # When building Wolfi only, use a unique local tag
+              BASE_LOCAL_TAG="superset-base-local:${{ github.run_id }}"
+              BUILD_ARGS="BASE_IMAGE=${BASE_LOCAL_TAG}"
+              echo "base_local_tag=${BASE_LOCAL_TAG}" >> $GITHUB_OUTPUT
             fi
           fi
 
@@ -85,17 +87,18 @@ jobs:
 
       - name: Build local base (Wolfi standalone only)
         if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        run: |
-          # Build the base image locally with the same tag structure as docker-compose
-          docker build \
-            -t apache/superset:dev \
-            -f Dockerfile \
-            --target lean \
-            --build-arg PY_VER=${{ env.PY_VER_ARG }} \
-            --platform ${{ matrix.platform }} .
-            
-          # Check if the image was built successfully
-          docker images | grep apache/superset
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          target: lean
+          platforms: ${{ matrix.platform }}
+          build-args: PY_VER=${{ env.PY_VER_ARG }}
+          tags: ${{ steps.prep.outputs.base_local_tag }}
+          push: false
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Prepare Wolfi files
         if: ${{ matrix.variant == 'wolfi' }}
@@ -162,7 +165,7 @@ jobs:
     needs: create-manifest
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout # Added to access scripts
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install vulnerability scanners

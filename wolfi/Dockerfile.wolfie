@@ -64,17 +64,14 @@ RUN pip3.11 install virtualenv && \
 ENV PATH="/app/venv/bin:$PATH"
 
 # Install base Python packages with vulnerability fixes
+# Use --ignore-installed to avoid conflicts
 RUN pip3.11 install --upgrade pip setuptools wheel flask-cors && \
   # Install requirements from base.txt first
   pip3.11 install -r /app/requirements/base.txt && \
-  # Upgrade vulnerable packages to secure versions
-  pip3.11 install --upgrade \
-    gunicorn==23.0.0 \
-    jinja2>=3.1.4 \
-    urllib3>=1.26.18 \
-    cryptography>=42.0.7 \
-    werkzeug>=3.0.6 \
-    certifi>=2024.7.4 && \
+  # Now force upgrade only gunicorn to avoid conflicts
+  pip3.11 install --upgrade --force-reinstall gunicorn==23.0.0 && \
+  # Only upgrade packages that don't conflict with base.txt
+  pip3.11 install --upgrade 'certifi>=2024.7.4' && \
   # Install psycopg2-binary which works without PostgreSQL dev packages
   pip3.11 install psycopg2-binary && \
   # Install boto3 for AWS S3 operations
