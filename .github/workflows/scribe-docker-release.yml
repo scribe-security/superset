@@ -41,6 +41,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:master
+
       - name: Prepare Build Variables
         id: prep
         run: |
@@ -71,9 +77,10 @@ jobs:
               # When building both, use the registry-tagged base image
               BUILD_ARGS="BASE_IMAGE=${BASE_TAG}-${{ env.PY_VERSION }}"
             else
-              # When building Wolfi only, modify Dockerfile to use python:3.11-slim-bookworm directly
-              BUILD_ARGS=""
-              NEEDS_DOCKERFILE_PATCH="true"
+              # When building Wolfi only, use the intermediate tag
+              TEMP_BASE_TAG="${{ github.run_id }}-temp-base"
+              BUILD_ARGS="BASE_IMAGE=${TEMP_BASE_TAG}"
+              echo "temp_base_tag=${TEMP_BASE_TAG}" >> $GITHUB_OUTPUT
             fi
           fi
 
@@ -83,7 +90,24 @@ jobs:
           echo "target=$TARGET" >> $GITHUB_OUTPUT
           echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
           echo "arch_tag=$ARCH_TAG" >> $GITHUB_OUTPUT
-          echo "needs_dockerfile_patch=$NEEDS_DOCKERFILE_PATCH" >> $GITHUB_OUTPUT
+
+      - name: Build local base (Wolfi standalone only)
+        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          target: lean
+          platforms: ${{ matrix.platform }}
+          build-args: PY_VER=${{ env.PY_VER_ARG }}
+          tags: ${{ steps.prep.outputs.temp_base_tag }}
+          outputs: type=docker,dest=/tmp/base-image.tar
+
+      - name: Load base image
+        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
+        run: |
+          docker load --input /tmp/base-image.tar
+          docker image ls
 
       - name: Prepare Wolfi files
         if: ${{ matrix.variant == 'wolfi' }}
@@ -91,18 +115,11 @@ jobs:
           mkdir -p docker/pythonpath
           cp wolfi/docker/pythonpath/* docker/pythonpath/ || true
 
-      - name: Patch Dockerfile for standalone Wolfi build
-        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        run: |
-          # Create a patched Dockerfile that uses python:3.11-slim-bookworm directly instead of ARG
-          sed 's/FROM ${BASE_IMAGE} AS build/FROM python:3.11-slim-bookworm AS build/' wolfi/Dockerfile.wolfie > wolfi/Dockerfile.wolfie.patched
-          echo "Using patched Dockerfile for standalone Wolfi build"
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' && 'wolfi/Dockerfile.wolfie.patched' || steps.prep.outputs.dockerfile }}
+          file: ${{ steps.prep.outputs.dockerfile }}
           push: true
           platforms: ${{ matrix.platform }}
           tags: ${{ steps.prep.outputs.tags }}
