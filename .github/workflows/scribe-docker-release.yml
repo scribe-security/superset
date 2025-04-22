@@ -1,4 +1,4 @@
-name: Scribe Docker Release
+name: Scribe Docker Release Optimized
 
 on:
   workflow_dispatch:
@@ -15,169 +15,183 @@ on:
           - wolfi
           - both
 
+env:
+  REGISTRY: scribesecurity
+  IMAGE_NAME: superset
+  PY_VERSION: "py311"
+  PY_VER_ARG: "3.11-slim-bookworm"
+  WOLFI_BRANCH: "4.1.2-to-wolfie"
+
 jobs:
-  docker-build:
-    name: docker-build
-    if: ${{ inputs.build_type == 'base' || inputs.build_type == 'both' }}
+  build:
+    name: Build ${{ matrix.variant }} for ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        build_preset: ["py311"]
-        platform: ["linux/amd64", "linux/arm64"]
+        platform: [linux/amd64, linux/arm64]
+        variant: ${{ fromJSON(format('[{0}]', inputs.build_type == 'both' && '"base", "wolfi"' || format('"{0}"', inputs.build_type))) }}
       fail-fast: false
     steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker Image
-        shell: bash
-        env:
-          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          pip install click
-          ./scripts/build_docker.py \
-            ${{ matrix.build_preset }} \
-            "release" \
-            --build_context_ref "${{ github.ref_name }}-${{ inputs.release_index }}" \
-            --platform ${{ matrix.platform }}
-
-      - name: Print version info
-        if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
-        run: |
-          echo "::notice::Successfully built and pushed standard Superset image:"
-          echo "::notice::Tag: scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-py311"
-          echo "::notice::Branch: ${{ github.ref_name }}"
-          echo "::notice::Release Index: ${{ inputs.release_index }}"
-
-  wolfi-build:
-    name: wolfi-build
-    needs: [docker-build]
-    if: ${{ inputs.build_type == 'both' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: ["linux/amd64", "linux/arm64"]
-      fail-fast: false
-    steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
+      - name: Docker Setup
+        uses: ./.github/actions/docker-setup
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Wolfi-based image
+      - name: Prepare Build Variables
+        id: prep
+        run: |
+          # Normalize platform to arch tag
+          ARCH_TAG="${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}"
+          
+          # Base tag pattern
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          
+          # Set variant-specific variables
+          if [ "${{ matrix.variant }}" = "base" ]; then
+            DOCKERFILE="Dockerfile"
+            TARGET="lean"
+            BUILD_ARGS="PY_VER=${{ env.PY_VER_ARG }}"
+            TAGS="${BASE_TAG}-${{ env.PY_VERSION }}"
+          else
+            DOCKERFILE="wolfi/Dockerfile.wolfie"
+            TARGET=""
+            TAGS="${BASE_TAG}-wolfi-${ARCH_TAG}"
+            
+            # Add branch-specific tag if applicable
+            if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+              TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi-${ARCH_TAG}"
+            fi
+            
+            # Set base image for Wolfi
+            if [ "${{ inputs.build_type }}" = "both" ]; then
+              BUILD_ARGS="BASE_IMAGE=${BASE_TAG}-${{ env.PY_VERSION }}"
+            else
+              BUILD_ARGS="BASE_IMAGE=superset-base:local"
+            fi
+          fi
+          
+          # Output variables
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
+          echo "arch_tag=$ARCH_TAG" >> $GITHUB_OUTPUT
+
+      - name: Build local base (Wolfi standalone only)
+        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
+        run: |
+          docker build -t superset-base:local -f Dockerfile --target lean \
+            --build-arg PY_VER=${{ env.PY_VER_ARG }} \
+            --platform ${{ matrix.platform }} .
+
+      - name: Prepare Wolfi files
+        if: ${{ matrix.variant == 'wolfi' }}
+        run: |
+          mkdir -p docker/pythonpath
+          cp wolfi/docker/pythonpath/* docker/pythonpath/ || true
+
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./wolfi/Dockerfile.wolfie
+          file: ${{ steps.prep.outputs.dockerfile }}
           push: true
           platforms: ${{ matrix.platform }}
-          tags: |
-            scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-            ${{ github.ref_name == '4.1.2-to-wolfie' && format('scribesecurity/superset:4.1.2-to-wolfie-wolfi-{0}', matrix.platform == 'linux/amd64' && 'amd' || 'arm') || '' }}
-          build-args: |
-            BASE_IMAGE=scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-py311
+          tags: ${{ steps.prep.outputs.tags }}
+          target: ${{ steps.prep.outputs.target || '' }}
+          build-args: ${{ steps.prep.outputs.build_args }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Print version info
-        if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
-        run: |
-          echo "::notice::Successfully built and pushed Wolfi-based image:"
-          echo "::notice::Tag: scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-amd"
-          echo "::notice::Branch: ${{ github.ref_name }}"
-          echo "::notice::Release Index: ${{ inputs.release_index }}"
-
-  wolfi-build-standalone:
-    name: wolfi-build-standalone
-    if: ${{ inputs.build_type == 'wolfi' }}
+  create-manifest:
+    name: Create Multi-arch Manifests
+    needs: build
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: ["linux/amd64", "linux/arm64"]
-      fail-fast: false
+        variant: ${{ fromJSON(format('[{0}]', inputs.build_type == 'both' && '"base", "wolfi"' || format('"{0}"', inputs.build_type))) }}
     steps:
-      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Use direct docker commands for both base and Wolfi builds
-      - name: Build and push Wolfi image with local base
+      - name: Create manifest
         run: |
-          # Step 1: Build the base image
-          echo "Building base image..."
-          docker build -t superset-base:local -f Dockerfile --target lean \
-            --build-arg PY_VER=3.11-slim-bookworm .
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          
+          if [ "${{ matrix.variant }}" = "base" ]; then
+            MANIFEST_TAG="${BASE_TAG}-${{ env.PY_VERSION }}"
+            docker manifest create $MANIFEST_TAG \
+              --amend $MANIFEST_TAG-amd64 \
+              --amend $MANIFEST_TAG-arm64
+          else
+            MANIFEST_TAG="${BASE_TAG}-wolfi"
+            docker manifest create $MANIFEST_TAG \
+              --amend $MANIFEST_TAG-amd \
+              --amend $MANIFEST_TAG-arm
+            
+            # Create branch-specific manifest
+            if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+              BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
+              docker manifest create $BRANCH_TAG \
+                --amend $BRANCH_TAG-amd \
+                --amend $BRANCH_TAG-arm
+              docker manifest push $BRANCH_TAG
+            fi
+          fi
+          
+          docker manifest push $MANIFEST_TAG
 
-          # Step 2: Verify the base image
-          docker images | grep superset-base
-          # boto3 is now installed during Docker build in the Dockerfile
-
-          # Step 3: Copy wolfi/docker/pythonpath to docker/pythonpath for Dockerfile.wolfie
-          echo "Preparing pythonpath files..."
-          mkdir -p docker/pythonpath
-          cp wolfi/docker/pythonpath/* docker/pythonpath/
-
-          # Step 4: Build the Wolfi image using the local base
-          echo "Building Wolfi image..."
-          docker build -t scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} \
-            -f wolfi/Dockerfile.wolfie \
-            --build-arg BASE_IMAGE=superset-base:local .
-
-          # Step 4: Push the Wolfi image to Docker Hub
-          echo "Pushing Wolfi image to Docker Hub..."
-          docker push scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-
-          # Step 5: Always create both specific version tag and generic tag
-          # First the specific version tag with release index
-          specific_tag=scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-          docker tag scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} $specific_tag
-          docker push $specific_tag
-          echo "Pushed specific tag: $specific_tag"
-
-          # Then the generic tag without release index (if on the target branch)
-          if [ "${{ github.ref_name }}" = "4.1.2-to-wolfie" ]; then
-            generic_tag=scribesecurity/superset:4.1.2-to-wolfie-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}
-            docker tag scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }} $generic_tag
-            docker push $generic_tag
-            echo "Also pushed generic tag: $generic_tag"
+  validate:
+    name: Validate Images
+    needs: create-manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate images
+        run: |
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          
+          if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            docker pull ${BASE_TAG}-${{ env.PY_VERSION }}
+            docker run --rm ${BASE_TAG}-${{ env.PY_VERSION }} superset version
+          fi
+          
+          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            docker pull ${BASE_TAG}-wolfi
+            docker run --rm ${BASE_TAG}-wolfi superset version
           fi
 
-      - name: Print version info
-        if: ${{ matrix.platform == 'linux/amd64' }} # Only print once
+      - name: Generate summary
         run: |
-          echo "::notice::Successfully built and pushed Wolfi-based image (standalone mode):"
-          echo "::notice::Tag: scribesecurity/superset:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi-amd"
-          echo "::notice::Branch: ${{ github.ref_name }}"
-          echo "::notice::Release Index: ${{ inputs.release_index }}"
+          echo "## 🚀 Docker Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌿 **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔢 **Release Index:** \`${{ inputs.release_index }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏗️ **Build Type:** \`${{ inputs.build_type }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📦 Published Images" >> $GITHUB_STEP_SUMMARY
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          
+          if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            echo "- 🐍 **Base Image:** \`${BASE_TAG}-${{ env.PY_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            echo "- 🐺 **Wolfi Image:** \`${BASE_TAG}-wolfi\`" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+              echo "- 🎯 **Branch-specific Wolfi:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi\`" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏛️ Multi-arch Support" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ linux/arm64" >> $GITHUB_STEP_SUMMARY
