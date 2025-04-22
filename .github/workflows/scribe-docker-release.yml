@@ -162,6 +162,23 @@ jobs:
     needs: create-manifest
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout # Added to access scripts
+        uses: actions/checkout@v4
+
+      - name: Install vulnerability scanners
+        run: |
+          # Install Trivy
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+          # Install Grype
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+          # Install jq for JSON processing
+          sudo apt-get install -y jq
+
       - name: Validate images
         run: |
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
@@ -175,6 +192,33 @@ jobs:
             docker pull ${BASE_TAG}-wolfi
             docker run --rm ${BASE_TAG}-wolfi superset version
           fi
+
+      - name: Run vulnerability scans (Wolfi images only)
+        if: ${{ inputs.build_type == 'wolfi' || inputs.build_type == 'both' }}
+        id: vuln-scan
+        run: |
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi"
+
+          # Run vulnerability scan using the updated script
+          cd wolfi
+          chmod +x check-vulnerabilities.sh
+          ./check-vulnerabilities.sh ${BASE_TAG}
+
+          # Extract summary data for the workflow summary
+          LATEST_SUMMARY=$(ls -t vulnerability-reports/scan_summary_*.json | head -1)
+          TRIVY_TOTAL=$(jq '.trivy.total' ${LATEST_SUMMARY})
+          TRIVY_CRITICAL=$(jq '.trivy.critical' ${LATEST_SUMMARY})
+          TRIVY_HIGH=$(jq '.trivy.high' ${LATEST_SUMMARY})
+          GRYPE_TOTAL=$(jq '.grype.total' ${LATEST_SUMMARY})
+          GRYPE_CRITICAL=$(jq '.grype.critical' ${LATEST_SUMMARY})
+          GRYPE_HIGH=$(jq '.grype.high' ${LATEST_SUMMARY})
+
+          echo "trivy_total=$TRIVY_TOTAL" >> $GITHUB_OUTPUT
+          echo "trivy_critical=$TRIVY_CRITICAL" >> $GITHUB_OUTPUT
+          echo "trivy_high=$TRIVY_HIGH" >> $GITHUB_OUTPUT
+          echo "grype_total=$GRYPE_TOTAL" >> $GITHUB_OUTPUT
+          echo "grype_critical=$GRYPE_CRITICAL" >> $GITHUB_OUTPUT
+          echo "grype_high=$GRYPE_HIGH" >> $GITHUB_OUTPUT
 
       - name: Generate summary
         run: |
@@ -198,6 +242,20 @@ jobs:
             if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
               echo "- 🎯 **Branch-specific Wolfi:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi\`" >> $GITHUB_STEP_SUMMARY
             fi
+          fi
+
+          # Add vulnerability scan results if available
+          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔍 Vulnerability Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "#### Trivy Results:" >> $GITHUB_STEP_SUMMARY
+            echo "- Total: ${{ steps.vuln-scan.outputs.trivy_total }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Critical: ${{ steps.vuln-scan.outputs.trivy_critical }}" >> $GITHUB_STEP_SUMMARY
+            echo "- High: ${{ steps.vuln-scan.outputs.trivy_high }}" >> $GITHUB_STEP_SUMMARY
+            echo "#### Grype Results:" >> $GITHUB_STEP_SUMMARY
+            echo "- Total: ${{ steps.vuln-scan.outputs.grype_total }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Critical: ${{ steps.vuln-scan.outputs.grype_critical }}" >> $GITHUB_STEP_SUMMARY
+            echo "- High: ${{ steps.vuln-scan.outputs.grype_high }}" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
