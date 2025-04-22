@@ -46,10 +46,10 @@ jobs:
         run: |
           # Normalize platform to arch tag
           ARCH_TAG="${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}"
-
+          
           # Base tag pattern
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-
+          
           # Set variant-specific variables
           if [ "${{ matrix.variant }}" = "base" ]; then
             DOCKERFILE="Dockerfile"
@@ -66,16 +66,16 @@ jobs:
               TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi-${ARCH_TAG}"
             fi
             
-            # Set base image for Wolfi - use local image tag
+            # Set base image for Wolfi
             if [ "${{ inputs.build_type }}" = "both" ]; then
               # When building both, use the registry-tagged base image
               BUILD_ARGS="BASE_IMAGE=${BASE_TAG}-${{ env.PY_VERSION }}"
             else
-              # When building Wolfi only, use the local dev image
-              BUILD_ARGS="BASE_IMAGE=apache/superset:dev"
+              # When building Wolfi only, use the local image name
+              BUILD_ARGS="BASE_IMAGE=localhost/superset-base:${{ github.run_id }}"
             fi
           fi
-
+          
           # Output variables
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
@@ -86,16 +86,15 @@ jobs:
       - name: Build local base (Wolfi standalone only)
         if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
         run: |
-          # Build the base image locally with the same tag structure as docker-compose
-          docker build \
-            -t apache/superset:dev \
-            -f Dockerfile \
+          # Build the base image locally using docker buildx
+          docker buildx build \
+            --file Dockerfile \
             --target lean \
+            --platform ${{ matrix.platform }} \
             --build-arg PY_VER=${{ env.PY_VER_ARG }} \
-            --platform ${{ matrix.platform }} .
-            
-          # Check if the image was built successfully
-          docker images | grep apache/superset
+            --tag localhost/superset-base:${{ github.run_id }} \
+            --load \
+            .
 
       - name: Prepare Wolfi files
         if: ${{ matrix.variant == 'wolfi' }}
@@ -133,7 +132,7 @@ jobs:
       - name: Create manifest
         run: |
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-
+          
           if [ "${{ matrix.variant }}" = "base" ]; then
             MANIFEST_TAG="${BASE_TAG}-${{ env.PY_VERSION }}"
             docker manifest create $MANIFEST_TAG \
@@ -154,7 +153,7 @@ jobs:
               docker manifest push $BRANCH_TAG
             fi
           fi
-
+          
           docker manifest push $MANIFEST_TAG
 
   validate:
@@ -165,12 +164,12 @@ jobs:
       - name: Validate images
         run: |
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-
+          
           if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
             docker pull ${BASE_TAG}-${{ env.PY_VERSION }}
             docker run --rm ${BASE_TAG}-${{ env.PY_VERSION }} superset version
           fi
-
+          
           if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
             docker pull ${BASE_TAG}-wolfi
             docker run --rm ${BASE_TAG}-wolfi superset version
@@ -185,21 +184,21 @@ jobs:
           echo "- 🔢 **Release Index:** \`${{ inputs.release_index }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- 🏗️ **Build Type:** \`${{ inputs.build_type }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
+          
           echo "### 📦 Published Images" >> $GITHUB_STEP_SUMMARY
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-
+          
           if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
             echo "- 🐍 **Base Image:** \`${BASE_TAG}-${{ env.PY_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
           fi
-
+          
           if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
             echo "- 🐺 **Wolfi Image:** \`${BASE_TAG}-wolfi\`" >> $GITHUB_STEP_SUMMARY
             if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
               echo "- 🎯 **Branch-specific Wolfi:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi\`" >> $GITHUB_STEP_SUMMARY
             fi
           fi
-
+          
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🏛️ Multi-arch Support" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
