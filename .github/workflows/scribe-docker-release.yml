@@ -141,6 +141,31 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Print final image name
+        run: |
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          
+          if [ "${{ matrix.variant }}" = "base" ]; then
+            FINAL_TAG="${BASE_TAG}-${{ env.PY_VERSION }}"
+            if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
+              FINAL_TAG="${FINAL_TAG}-amd64"
+            else
+              FINAL_TAG="${FINAL_TAG}-arm64"
+            fi
+          else
+            ARCH_TAG="${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}"
+            FINAL_TAG="${BASE_TAG}-wolfi-${ARCH_TAG}"
+          fi
+          
+          echo "----------------------------------------"
+          echo "🐳 FINAL IMAGE NAME: ${FINAL_TAG}"
+          echo "----------------------------------------"
+          echo "You can pull this image with: docker pull ${FINAL_TAG}"
+          echo "----------------------------------------"
+          
+          # Also add to GitHub environment variables for later reference
+          echo "FINAL_IMAGE_TAG=${FINAL_TAG}" >> $GITHUB_ENV
+
       - name: Stop local registry
         if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
         run: |
@@ -239,16 +264,51 @@ jobs:
           TRIVY_TOTAL=$(jq '.trivy.total' ${LATEST_SUMMARY})
           TRIVY_CRITICAL=$(jq '.trivy.critical' ${LATEST_SUMMARY})
           TRIVY_HIGH=$(jq '.trivy.high' ${LATEST_SUMMARY})
+          TRIVY_MEDIUM=$(jq '.trivy.medium' ${LATEST_SUMMARY})
+          TRIVY_LOW=$(jq '.trivy.low' ${LATEST_SUMMARY})
           GRYPE_TOTAL=$(jq '.grype.total' ${LATEST_SUMMARY})
           GRYPE_CRITICAL=$(jq '.grype.critical' ${LATEST_SUMMARY})
           GRYPE_HIGH=$(jq '.grype.high' ${LATEST_SUMMARY})
+          GRYPE_MEDIUM=$(jq '.grype.medium' ${LATEST_SUMMARY})
+          GRYPE_LOW=$(jq '.grype.low' ${LATEST_SUMMARY})
 
+          # Save all outputs
           echo "trivy_total=$TRIVY_TOTAL" >> $GITHUB_OUTPUT
           echo "trivy_critical=$TRIVY_CRITICAL" >> $GITHUB_OUTPUT
           echo "trivy_high=$TRIVY_HIGH" >> $GITHUB_OUTPUT
+          echo "trivy_medium=$TRIVY_MEDIUM" >> $GITHUB_OUTPUT
+          echo "trivy_low=$TRIVY_LOW" >> $GITHUB_OUTPUT
           echo "grype_total=$GRYPE_TOTAL" >> $GITHUB_OUTPUT
           echo "grype_critical=$GRYPE_CRITICAL" >> $GITHUB_OUTPUT
           echo "grype_high=$GRYPE_HIGH" >> $GITHUB_OUTPUT
+          echo "grype_medium=$GRYPE_MEDIUM" >> $GITHUB_OUTPUT
+          echo "grype_low=$GRYPE_LOW" >> $GITHUB_OUTPUT
+
+          # Print detailed vulnerability summary to console
+          echo "----------------------------------------"
+          echo "🔍 VULNERABILITY SCAN SUMMARY"
+          echo "----------------------------------------"
+          echo "📊 Trivy Results:"
+          echo "   - Total: $TRIVY_TOTAL"
+          echo "   - Critical: $TRIVY_CRITICAL"
+          echo "   - High: $TRIVY_HIGH"
+          echo "   - Medium: $TRIVY_MEDIUM"
+          echo "   - Low: $TRIVY_LOW"
+          echo ""
+          echo "📊 Grype Results:"
+          echo "   - Total: $GRYPE_TOTAL"
+          echo "   - Critical: $GRYPE_CRITICAL"
+          echo "   - High: $GRYPE_HIGH"
+          echo "   - Medium: $GRYPE_MEDIUM"
+          echo "   - Low: $GRYPE_LOW"
+          echo "----------------------------------------"
+          
+          # Check if there are critical vulnerabilities and set output flag
+          if [ "$TRIVY_CRITICAL" -gt 0 ] || [ "$GRYPE_CRITICAL" -gt 0 ]; then
+            echo "has_critical=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_critical=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate summary
         run: |
@@ -278,17 +338,79 @@ jobs:
           if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🔍 Vulnerability Scan Results" >> $GITHUB_STEP_SUMMARY
-            echo "#### Trivy Results:" >> $GITHUB_STEP_SUMMARY
-            echo "- Total: ${{ steps.vuln-scan.outputs.trivy_total }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Critical: ${{ steps.vuln-scan.outputs.trivy_critical }}" >> $GITHUB_STEP_SUMMARY
-            echo "- High: ${{ steps.vuln-scan.outputs.trivy_high }}" >> $GITHUB_STEP_SUMMARY
-            echo "#### Grype Results:" >> $GITHUB_STEP_SUMMARY
-            echo "- Total: ${{ steps.vuln-scan.outputs.grype_total }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Critical: ${{ steps.vuln-scan.outputs.grype_critical }}" >> $GITHUB_STEP_SUMMARY
-            echo "- High: ${{ steps.vuln-scan.outputs.grype_high }}" >> $GITHUB_STEP_SUMMARY
+            
+            # Add status badges
+            if [ "${{ steps.vuln-scan.outputs.has_critical }}" == "true" ]; then
+              echo "**Status:** ❌ Critical vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ steps.vuln-scan.outputs.trivy_high }}" -gt 0 ] || [ "${{ steps.vuln-scan.outputs.grype_high }}" -gt 0 ]; then
+              echo "**Status:** ⚠️ High vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Status:** ✅ No critical or high vulnerabilities" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Trivy Results" >> $GITHUB_STEP_SUMMARY
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Critical | ${{ steps.vuln-scan.outputs.trivy_critical }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| High     | ${{ steps.vuln-scan.outputs.trivy_high }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium   | ${{ steps.vuln-scan.outputs.trivy_medium }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low      | ${{ steps.vuln-scan.outputs.trivy_low }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total**    | **${{ steps.vuln-scan.outputs.trivy_total }}** |" >> $GITHUB_STEP_SUMMARY
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Grype Results" >> $GITHUB_STEP_SUMMARY
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Critical | ${{ steps.vuln-scan.outputs.grype_critical }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| High     | ${{ steps.vuln-scan.outputs.grype_high }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium   | ${{ steps.vuln-scan.outputs.grype_medium }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low      | ${{ steps.vuln-scan.outputs.grype_low }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total**    | **${{ steps.vuln-scan.outputs.grype_total }}** |" >> $GITHUB_STEP_SUMMARY
+            
+            # Add comparison summary
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### Risk Assessment" >> $GITHUB_STEP_SUMMARY
+            
+            # Calculate total critical and high across both scanners
+            TOTAL_CRITICAL=$(({{ steps.vuln-scan.outputs.trivy_critical }} + {{ steps.vuln-scan.outputs.grype_critical }}))
+            TOTAL_HIGH=$(({{ steps.vuln-scan.outputs.trivy_high }} + {{ steps.vuln-scan.outputs.grype_high }}))
+            
+            if [ "$TOTAL_CRITICAL" -gt 0 ]; then
+              echo "⛔ **Critical Issues:** Detected $TOTAL_CRITICAL critical vulnerabilities. Action required before deployment." >> $GITHUB_STEP_SUMMARY
+            elif [ "$TOTAL_HIGH" -gt 5 ]; then
+              echo "🚧 **High Risk:** Multiple high severity vulnerabilities ($TOTAL_HIGH) detected. Review recommended." >> $GITHUB_STEP_SUMMARY
+            elif [ "$TOTAL_HIGH" -gt 0 ]; then
+              echo "⚠️ **Moderate Risk:** Some high severity vulnerabilities detected. Consider review." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ **Low Risk:** No critical or high vulnerabilities detected. Image appears secure." >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🏛️ Multi-arch Support" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ linux/arm64" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo "```bash" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            echo "# Pull multi-arch base image:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull specific platform base images:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}-amd64" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}-arm64" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull multi-arch wolfi image:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${BASE_TAG}-wolfi" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull specific platform wolfi images:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${BASE_TAG}-wolfi-amd" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${BASE_TAG}-wolfi-arm" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "```" >> $GITHUB_STEP_SUMMARY
