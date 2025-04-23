@@ -33,7 +33,8 @@ RUN apk update --no-cache && \
   tzdata \
   curl \
   wget \
-  postgresql-client
+  postgresql-client \
+  zip
 
 # Try to install PostgreSQL dev packages if they exist
 RUN apk add --no-cache postgresql-dev || echo "Using default PostgreSQL development libraries"
