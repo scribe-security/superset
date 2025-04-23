@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Run Dockerfile.wolfie with your local branch using docker-compose override
+# Run Dockerfile.wolfi with your local branch using docker-compose override
 
 # Navigate to the main Superset directory
 cd /Users/scribe/Projects/sps3/superset

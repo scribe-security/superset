@@ -15,7 +15,7 @@ export BASE_IMAGE="apache/superset:latest-dev"
 docker build \
     --build-arg BASE_IMAGE="${BASE_IMAGE}" \
     -t apache/superset:latest-dev \
-    -f wolfi/Dockerfile.wolfie \
+    -f wolfi/Dockerfile.wolfi \
     .
 
 echo "Image built successfully! Now running docker-compose..."

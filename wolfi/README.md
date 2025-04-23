@@ -6,8 +6,8 @@ This directory contains scripts and configuration files for building and managin
 
 ```
 wolfi/
-├── Dockerfile.wolfie           # Main Dockerfile for building Wolfi-based Superset
-├── Dockerfile.wolfie-fix-deps  # Fixed version addressing dependency conflicts
+├── Dockerfile.wolfi           # Main Dockerfile for building Wolfi-based Superset
+├── Dockerfile.wolfi-fix-deps  # Fixed version addressing dependency conflicts
 ├── build-*.sh                  # Various build scripts
 ├── check-vulnerabilities.sh    # Vulnerability scanning script
 ├── run-*.sh                    # Scripts to run the image
@@ -90,14 +90,14 @@ Cleans up temporary files and old vulnerability reports:
 
 ## Dockerfiles
 
-### `Dockerfile.wolfie`
+### `Dockerfile.wolfi`
 The main Dockerfile that creates the Wolfi-based Superset image:
 - Uses Chainguard's Wolfi base image
 - Installs Python 3.11 and required dependencies
 - Configures security settings
 - Copies Superset artifacts from the base image
 
-### `Dockerfile.wolfie-fix-deps`
+### `Dockerfile.wolfi-fix-deps`
 A modified version of the Dockerfile that:
 - Addresses dependency conflict issues
 - Uses version constraints instead of exact versions

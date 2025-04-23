@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Run Dockerfile.wolfie with your local branch, replacing the default Superset image in docker-compose
+# Run Dockerfile.wolfi with your local branch, replacing the default Superset image in docker-compose
 
 # Navigate to the main Superset directory
 cd /Users/scribe/Projects/sps3/superset
@@ -12,7 +12,7 @@ echo "Building Wolfie-based Superset image from your branch..."
 docker build \
     --build-arg BASE_IMAGE="apache/superset:latest-dev" \
     -t apache/superset:wolfie-local \
-    -f wolfi/Dockerfile.wolfie \
+    -f wolfi/Dockerfile.wolfi \
     .
 
 # Use the locally built image by overriding the image for Superset services

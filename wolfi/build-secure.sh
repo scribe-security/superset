@@ -4,7 +4,7 @@
 # This script builds a security-hardened version of Superset
 
 # Set environment variables
-DOCKERFILE_PATH="./Dockerfile.wolfie"
+DOCKERFILE_PATH="./Dockerfile.wolfi"
 IMAGE_NAME="apache/superset"
 IMAGE_TAG="latest-dev-secure"
 BASE_IMAGE=${BASE_IMAGE:-"apache/superset:latest-dev"}  # Use existing image as build stage

@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 # Set variables
 IMAGE_NAME="apache/superset"
 IMAGE_TAG="wolfi-latest"
-DOCKERFILE_PATH="Dockerfile.wolfie"
+DOCKERFILE_PATH="Dockerfile.wolfi"
 BUILD_CONTEXT=".."
 
 echo -e "${YELLOW}Starting build and vulnerability check process...${NC}\n"

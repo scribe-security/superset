@@ -5,7 +5,7 @@
 # Set variables
 IMAGE_NAME="apache/superset"
 IMAGE_TAG="latest-dev"
-DOCKERFILE_PATH="Dockerfile.wolfie"
+DOCKERFILE_PATH="Dockerfile.wolfi"
 BUILD_CONTEXT=".."
 
 # Change to the superset root directory first
