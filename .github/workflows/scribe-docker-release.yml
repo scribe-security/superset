@@ -72,7 +72,7 @@ jobs:
             DOCKERFILE="Dockerfile"
             TARGET="lean"
             BUILD_ARGS="PY_VER=${{ env.PY_VER_ARG }}"
-            TAGS="${BASE_TAG}-${{ env.PY_VERSION }}"
+            TAGS="${BASE_TAG}-${{ env.PY_VERSION }}-${ARCH_TAG}"
           else
             DOCKERFILE="wolfi/Dockerfile.wolfie"
             TARGET=""
