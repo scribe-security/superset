@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm64]
+        platform: [linux/amd64]
         variant: ${{ fromJSON(format('[{0}]', inputs.build_type == 'both' && '"base", "wolfi"' || format('"{0}"', inputs.build_type))) }}
       fail-fast: false
     steps:
@@ -199,128 +199,37 @@ jobs:
           if [ "${{ matrix.variant }}" = "base" ]; then
             # Base image tags
             AMD_IMAGE="${MANIFEST_TAG}-amd64"
-            ARM_IMAGE="${MANIFEST_TAG}-arm64"
           else
             # Wolfi image tags 
             AMD_IMAGE="${MANIFEST_TAG}-amd"
-            ARM_IMAGE="${MANIFEST_TAG}-arm"
           fi
           
           # Verify images exist
           echo "Verifying images exist..."
           docker pull $AMD_IMAGE || { echo "AMD image not found: $AMD_IMAGE"; exit 1; }
-          docker pull $ARM_IMAGE || { echo "ARM image not found: $ARM_IMAGE"; exit 1; }
           
           # Clean any existing manifest
           echo "Cleaning existing manifest..."
           docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
           
-          # Approach for when images are already manifest lists
-          if [ "${{ matrix.variant }}" = "wolfi" ]; then
-            # For Wolfi images, extract digests from manifest lists
-            echo "Extracting platform-specific digests for Wolfi images..."
-            
-            # Print image details for debugging
-            echo "AMD image details:"
-            docker buildx imagetools inspect "$AMD_IMAGE"
-            
-            echo "ARM image details:"
-            docker buildx imagetools inspect "$ARM_IMAGE"
-            
-            # Instead of using --format which requires experimental features,
-            # extract specific digests using grep and awk
-            echo "Extracting digests without requiring experimental features..."
-            
-            # Extract AMD digest using grep and awk from the inspection output
-            AMD_INSPECTION=$(docker buildx imagetools inspect "$AMD_IMAGE")
-            
-            # Try to get direct URLs
-            AMD_URL=$(echo "$AMD_INSPECTION" | grep -A 3 "Platform:    linux/amd64" | grep "Name:" | awk '{print $2}')
-            
-            # Extract ARM digest using grep and awk from the inspection output
-            ARM_INSPECTION=$(docker buildx imagetools inspect "$ARM_IMAGE")
-            ARM_URL=$(echo "$ARM_INSPECTION" | grep -A 3 "Platform:    linux/arm64" | grep "Name:" | awk '{print $2}')
-            
-            if [ -n "$AMD_URL" ] && [ -n "$ARM_URL" ]; then
-              echo "Creating manifest with full URLs:"
-              echo "AMD URL: $AMD_URL"
-              echo "ARM URL: $ARM_URL"
-              
-              # Create manifest with direct URLs to specific platform manifests
-              docker manifest create "$MANIFEST_TAG" "$AMD_URL" "$ARM_URL"
-=======
-        
-            # Try creating manifest directly with full URLs extracted from the output
-            # Extract the full URLs from inspect output that contain the specific manifests
-            AMD_URL=$(echo "$AMD_INSPECTION" | grep -A 3 "Platform:    linux/amd64" | grep "Name:" | awk '{print $2}')
-            ARM_URL=$(echo "$ARM_INSPECTION" | grep -A 3 "Platform:    linux/arm64" | grep "Name:" | awk '{print $2}')
-            
-            if [ -n "$AMD_URL" ] && [ -n "$ARM_URL" ]; then
-              echo "Creating manifest with full URLs:"
-              echo "AMD URL: $AMD_URL"
-              echo "ARM URL: $ARM_URL"
-              
-              docker manifest create "$MANIFEST_TAG" "$AMD_URL" "$ARM_URL"
-            else
-              echo "Could not extract digests, falling back to simple approach..."
-              docker manifest create "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"
-            fi
-          else
-            # For base images, use direct references
-            echo "Creating manifest for base image using direct references..."
-            docker manifest create "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"
-          fi
-          
-          # Push the manifest
-          echo "Pushing manifest..."
-          if ! docker manifest push "$MANIFEST_TAG"; then
-            echo "Failed to push manifest. Trying alternative approach..."
-            
-            # Clean and try again with a simpler approach
-            docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
-            docker manifest create "$MANIFEST_TAG" "$AMD_IMAGE" "$ARM_IMAGE"
-            
-            if ! docker manifest push "$MANIFEST_TAG"; then
-              echo "All approaches failed. Exiting with error."
-              exit 1
-            fi
-          else
-            echo "Successfully pushed manifest: $MANIFEST_TAG"
-          fi
+          # Create AMD-only manifest
+          echo "Creating AMD-only manifest..."
+          docker tag "$AMD_IMAGE" "$MANIFEST_TAG"
+          docker push "$MANIFEST_TAG"
+          echo "Successfully pushed manifest: $MANIFEST_TAG"
           
           # Create branch-specific manifest if needed
           if [ "${{ matrix.variant }}" = "wolfi" ] && [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
             BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
             AMD_BRANCH_IMAGE="${BRANCH_TAG}-amd"
-            ARM_BRANCH_IMAGE="${BRANCH_TAG}-arm"
             
             echo "Creating branch-specific manifest ($BRANCH_TAG)..."
             docker manifest rm "$BRANCH_TAG" 2>/dev/null || true
             
-            # Extract branch-specific URLs using grep/awk (without experimental features)
-            AMD_BRANCH_INSPECTION=$(docker buildx imagetools inspect "$AMD_BRANCH_IMAGE")
-            ARM_BRANCH_INSPECTION=$(docker buildx imagetools inspect "$ARM_BRANCH_IMAGE")
-            
-            AMD_BRANCH_URL=$(echo "$AMD_BRANCH_INSPECTION" | grep -A 3 "Platform:    linux/amd64" | grep "Name:" | awk '{print $2}')
-            ARM_BRANCH_URL=$(echo "$ARM_BRANCH_INSPECTION" | grep -A 3 "Platform:    linux/arm64" | grep "Name:" | awk '{print $2}')
-            
-            if [ -n "$AMD_BRANCH_URL" ] && [ -n "$ARM_BRANCH_URL" ]; then
-              echo "Creating branch manifest with direct URLs..."
-              echo "AMD Branch URL: $AMD_BRANCH_URL"
-              echo "ARM Branch URL: $ARM_BRANCH_URL"
-              
-              docker manifest create "$BRANCH_TAG" "$AMD_BRANCH_URL" "$ARM_BRANCH_URL"
-            else
-              echo "Falling back to simple approach for branch manifest..."
-              docker manifest create "$BRANCH_TAG" "$AMD_BRANCH_IMAGE" "$ARM_BRANCH_IMAGE"
-            fi
-            
-            # Push branch manifest
-            if ! docker manifest push "$BRANCH_TAG"; then
-              echo "Warning: Failed to push branch manifest, but continuing..."
-            else
-              echo "Successfully pushed branch manifest: $BRANCH_TAG"
-            fi
+            # Create AMD-only branch manifest 
+            docker tag "$AMD_BRANCH_IMAGE" "$BRANCH_TAG"
+            docker push "$BRANCH_TAG"
+            echo "Successfully pushed branch manifest: $BRANCH_TAG"
           fi
 
   validate:
@@ -499,29 +408,26 @@ jobs:
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🏛️ Multi-arch Support" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏛️ Architecture Support" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ linux/arm64" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "```bash" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            echo "# Pull multi-arch base image:" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull base image:" >> $GITHUB_STEP_SUMMARY
             echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Pull specific platform base images:" >> $GITHUB_STEP_SUMMARY
+            echo "# Or pull AMD-specific base image:" >> $GITHUB_STEP_SUMMARY
             echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}-amd64" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}-arm64" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Pull multi-arch wolfi image:" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull wolfi image:" >> $GITHUB_STEP_SUMMARY
             echo "docker pull ${BASE_TAG}-wolfi" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Pull specific platform wolfi images:" >> $GITHUB_STEP_SUMMARY
+            echo "# Or pull AMD-specific wolfi image:" >> $GITHUB_STEP_SUMMARY
             echo "docker pull ${BASE_TAG}-wolfi-amd" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${BASE_TAG}-wolfi-arm" >> $GITHUB_STEP_SUMMARY
           fi
           echo "```" >> $GITHUB_STEP_SUMMARY
