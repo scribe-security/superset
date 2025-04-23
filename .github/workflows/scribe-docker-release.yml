@@ -68,6 +68,25 @@ jobs:
           mkdir -p docker/pythonpath
           cp wolfi/docker/pythonpath/* docker/pythonpath/ || true
 
+      - name: Build base image first
+        run: |
+          echo "Building base image from docker-compose.yml..."
+          # Define the base image tag
+          BASE_IMAGE="${{ steps.prep.outputs.base_image }}"
+          echo "Base image will be: $BASE_IMAGE"
+          
+          # Build the base image using docker-compose build
+          docker build \
+            -t $BASE_IMAGE \
+            --target dev \
+            --build-arg PY_VER=${{ env.PY_VER_ARG }} \
+            .
+          
+          # Push the base image
+          docker push $BASE_IMAGE
+          
+          echo "✅ Successfully built and pushed base image: $BASE_IMAGE"
+
       - name: Build and push Wolfi image
         uses: docker/build-push-action@v5
         with:
