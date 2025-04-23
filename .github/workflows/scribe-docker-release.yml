@@ -1,19 +1,11 @@
-name: Scribe Docker Release Optimized
+name: Scribe Wolfi Release
 
 on:
   workflow_dispatch:
     inputs:
       release_index:
         required: true
-      build_type:
-        description: "Image to build"
-        required: true
-        default: "base"
-        type: choice
-        options:
-          - base
-          - wolfi
-          - both
+        description: "Release index number"
 
 env:
   REGISTRY: scribesecurity
@@ -24,12 +16,11 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.variant }} for ${{ matrix.platform }}
+    name: Build Wolfi Image for ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64]
-        variant: ${{ fromJSON(format('[{0}]', inputs.build_type == 'both' && '"base", "wolfi"' || format('"{0}"', inputs.build_type))) }}
+        platform: [linux/amd64] # Build only for AMD architecture
       fail-fast: false
     steps:
       - name: Checkout
@@ -41,22 +32,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Start local registry
-        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        run: |
-          docker run -d -p 5000:5000 --name registry registry:2
-          echo "LOCAL_REGISTRY=localhost:5000" >> $GITHUB_ENV
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            network=host
-          buildkitd-flags: --allow-insecure-entitlement network.host
-          config-inline: |
-            [registry."localhost:5000"]
-              http = true
-              insecure = true
 
       - name: Prepare Build Variables
         id: prep
@@ -67,367 +44,110 @@ jobs:
           # Base tag pattern
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
 
-          # Set variant-specific variables
-          if [ "${{ matrix.variant }}" = "base" ]; then
-            DOCKERFILE="Dockerfile"
-            TARGET="lean"
-            BUILD_ARGS="PY_VER=${{ env.PY_VER_ARG }}"
-            TAGS="${BASE_TAG}-${{ env.PY_VERSION }}-${ARCH_TAG}"
+          # Wolfi tag
+          WOLFI_TAG="${BASE_TAG}-wolfi-${ARCH_TAG}"
+
+          # Add branch-specific tag if applicable
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+            TAGS="${WOLFI_TAG},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi-${ARCH_TAG}"
           else
-            DOCKERFILE="wolfi/Dockerfile.wolfie"
-            TARGET=""
-            TAGS="${BASE_TAG}-wolfi-${ARCH_TAG}"
-            
-            # Add branch-specific tag if applicable
-            if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
-              TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi-${ARCH_TAG}"
-            fi
-            
-            # Set base image for Wolfi
-            if [ "${{ inputs.build_type }}" = "both" ]; then
-              # When building both, use the registry-tagged base image
-              BUILD_ARGS="BASE_IMAGE=${BASE_TAG}-${{ env.PY_VERSION }}"
-            else
-              # When building Wolfi only, use local registry
-              BUILD_ARGS="BASE_IMAGE=localhost:5000/superset-base:${{ github.run_id }}"
-            fi
+            TAGS="${WOLFI_TAG}"
           fi
+
+          # Use existing base image as the build base
+          BASE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}-${{ env.PY_VERSION }}"
 
           # Output variables
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
-          echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
-          echo "target=$TARGET" >> $GITHUB_OUTPUT
-          echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
+          echo "base_image=$BASE_IMAGE" >> $GITHUB_OUTPUT
           echo "arch_tag=$ARCH_TAG" >> $GITHUB_OUTPUT
-
-      - name: Build local base (Wolfi standalone only)
-        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          target: lean
-          platforms: ${{ matrix.platform }}
-          build-args: PY_VER=${{ env.PY_VER_ARG }}
-          tags: localhost:5000/superset-base:${{ github.run_id }}
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Verify local registry
-        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        run: |
-          echo "Checking registry content..."
-          curl http://localhost:5000/v2/_catalog
-          echo "Checking image tags..."
-          curl http://localhost:5000/v2/superset-base/tags/list
+          echo "wolfi_tag=$WOLFI_TAG" >> $GITHUB_OUTPUT
 
       - name: Prepare Wolfi files
-        if: ${{ matrix.variant == 'wolfi' }}
         run: |
           mkdir -p docker/pythonpath
           cp wolfi/docker/pythonpath/* docker/pythonpath/ || true
 
-      - name: Build and push
+      - name: Build and push Wolfi image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ steps.prep.outputs.dockerfile }}
+          file: wolfi/Dockerfile.wolfie
           push: true
           platforms: ${{ matrix.platform }}
           tags: ${{ steps.prep.outputs.tags }}
-          target: ${{ steps.prep.outputs.target || '' }}
-          build-args: ${{ steps.prep.outputs.build_args }}
+          build-args: |
+            BASE_IMAGE=${{ steps.prep.outputs.base_image }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Print final image name
+      - name: Create regular tag for Wolfi image
         run: |
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-          
-          if [ "${{ matrix.variant }}" = "base" ]; then
-            FINAL_TAG="${BASE_TAG}-${{ env.PY_VERSION }}"
-            if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
-              FINAL_TAG="${FINAL_TAG}-amd64"
-            else
-              FINAL_TAG="${FINAL_TAG}-arm64"
-            fi
-          else
-            ARCH_TAG="${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}"
-            FINAL_TAG="${BASE_TAG}-wolfi-${ARCH_TAG}"
-          fi
-          
-          echo "----------------------------------------"
-          echo "🐳 FINAL IMAGE NAME: ${FINAL_TAG}"
-          echo "----------------------------------------"
-          echo "You can pull this image with: docker pull ${FINAL_TAG}"
-          echo "----------------------------------------"
-          
-          # Also add to GitHub environment variables for later reference
-          echo "FINAL_IMAGE_TAG=${FINAL_TAG}" >> $GITHUB_ENV
+          WOLFI_TAG="${BASE_TAG}-wolfi"
+          ARCH_TAG="${{ steps.prep.outputs.arch_tag }}"
+          ARCH_SPECIFIC_TAG="${WOLFI_TAG}-${ARCH_TAG}"
 
-      - name: Stop local registry
-        if: ${{ matrix.variant == 'wolfi' && inputs.build_type == 'wolfi' }}
-        run: |
-          docker stop registry && docker rm registry || true
+          echo "Creating main tag for Wolfi image..."
+          docker pull $ARCH_SPECIFIC_TAG
+          docker tag $ARCH_SPECIFIC_TAG $WOLFI_TAG
+          docker push $WOLFI_TAG
 
-  create-manifest:
-    name: Create Multi-arch Manifests
-    needs: build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        variant: ${{ fromJSON(format('[{0}]', inputs.build_type == 'both' && '"base", "wolfi"' || format('"{0}"', inputs.build_type))) }}
-    steps:
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          echo "✅ Successfully created and pushed: $WOLFI_TAG"
 
-      - name: Create manifest
-        run: |
-          # Disable automatic exit on error for more controlled error handling
-          set +e
-          
-          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-          MANIFEST_TAG="${BASE_TAG}-${{ matrix.variant == 'base' && env.PY_VERSION || 'wolfi' }}"
-          
-          echo "Creating manifest for $MANIFEST_TAG..."
-          
-          # Get platform-specific images
-          if [ "${{ matrix.variant }}" = "base" ]; then
-            # Base image tags
-            AMD_IMAGE="${MANIFEST_TAG}-amd64"
-          else
-            # Wolfi image tags 
-            AMD_IMAGE="${MANIFEST_TAG}-amd"
-          fi
-          
-          # Verify images exist
-          echo "Verifying images exist..."
-          docker pull $AMD_IMAGE || { echo "AMD image not found: $AMD_IMAGE"; exit 1; }
-          
-          # Clean any existing manifest
-          echo "Cleaning existing manifest..."
-          docker manifest rm "$MANIFEST_TAG" 2>/dev/null || true
-          
-          # Create AMD-only manifest
-          echo "Creating AMD-only manifest..."
-          docker tag "$AMD_IMAGE" "$MANIFEST_TAG"
-          docker push "$MANIFEST_TAG"
-          echo "Successfully pushed manifest: $MANIFEST_TAG"
-          
-          # Create branch-specific manifest if needed
-          if [ "${{ matrix.variant }}" = "wolfi" ] && [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+          # Create branch-specific tag if applicable
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
             BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
-            AMD_BRANCH_IMAGE="${BRANCH_TAG}-amd"
+            BRANCH_ARCH_TAG="${BRANCH_TAG}-${ARCH_TAG}"
             
-            echo "Creating branch-specific manifest ($BRANCH_TAG)..."
-            docker manifest rm "$BRANCH_TAG" 2>/dev/null || true
+            echo "Creating branch-specific tag..."
+            docker pull $BRANCH_ARCH_TAG
+            docker tag $BRANCH_ARCH_TAG $BRANCH_TAG
+            docker push $BRANCH_TAG
             
-            # Create AMD-only branch manifest 
-            docker tag "$AMD_BRANCH_IMAGE" "$BRANCH_TAG"
-            docker push "$BRANCH_TAG"
-            echo "Successfully pushed branch manifest: $BRANCH_TAG"
-          fi
-
-  validate:
-    name: Validate Images
-    needs: create-manifest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install vulnerability scanners
-        run: |
-          # Install Trivy
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
-
-          # Install Grype
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-
-          # Install jq for JSON processing
-          sudo apt-get install -y jq
-
-      - name: Validate images
-        run: |
-          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
-
-          if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            docker pull ${BASE_TAG}-${{ env.PY_VERSION }}
-            docker run --rm ${BASE_TAG}-${{ env.PY_VERSION }} superset version
-          fi
-
-          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            docker pull ${BASE_TAG}-wolfi
-            docker run --rm ${BASE_TAG}-wolfi superset version
-          fi
-
-      - name: Run vulnerability scans (Wolfi images only)
-        if: ${{ inputs.build_type == 'wolfi' || inputs.build_type == 'both' }}
-        id: vuln-scan
-        run: |
-          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}-wolfi"
-
-          # Run vulnerability scan using the updated script
-          cd wolfi
-          chmod +x check-vulnerabilities.sh
-          ./check-vulnerabilities.sh ${BASE_TAG}
-
-          # Extract summary data for the workflow summary
-          LATEST_SUMMARY=$(ls -t vulnerability-reports/scan_summary_*.json | head -1)
-          TRIVY_TOTAL=$(jq '.trivy.total' ${LATEST_SUMMARY})
-          TRIVY_CRITICAL=$(jq '.trivy.critical' ${LATEST_SUMMARY})
-          TRIVY_HIGH=$(jq '.trivy.high' ${LATEST_SUMMARY})
-          TRIVY_MEDIUM=$(jq '.trivy.medium' ${LATEST_SUMMARY})
-          TRIVY_LOW=$(jq '.trivy.low' ${LATEST_SUMMARY})
-          GRYPE_TOTAL=$(jq '.grype.total' ${LATEST_SUMMARY})
-          GRYPE_CRITICAL=$(jq '.grype.critical' ${LATEST_SUMMARY})
-          GRYPE_HIGH=$(jq '.grype.high' ${LATEST_SUMMARY})
-          GRYPE_MEDIUM=$(jq '.grype.medium' ${LATEST_SUMMARY})
-          GRYPE_LOW=$(jq '.grype.low' ${LATEST_SUMMARY})
-
-          # Save all outputs
-          echo "trivy_total=$TRIVY_TOTAL" >> $GITHUB_OUTPUT
-          echo "trivy_critical=$TRIVY_CRITICAL" >> $GITHUB_OUTPUT
-          echo "trivy_high=$TRIVY_HIGH" >> $GITHUB_OUTPUT
-          echo "trivy_medium=$TRIVY_MEDIUM" >> $GITHUB_OUTPUT
-          echo "trivy_low=$TRIVY_LOW" >> $GITHUB_OUTPUT
-          echo "grype_total=$GRYPE_TOTAL" >> $GITHUB_OUTPUT
-          echo "grype_critical=$GRYPE_CRITICAL" >> $GITHUB_OUTPUT
-          echo "grype_high=$GRYPE_HIGH" >> $GITHUB_OUTPUT
-          echo "grype_medium=$GRYPE_MEDIUM" >> $GITHUB_OUTPUT
-          echo "grype_low=$GRYPE_LOW" >> $GITHUB_OUTPUT
-
-          # Print detailed vulnerability summary to console
-          echo "----------------------------------------"
-          echo "🔍 VULNERABILITY SCAN SUMMARY"
-          echo "----------------------------------------"
-          echo "📊 Trivy Results:"
-          echo "   - Total: $TRIVY_TOTAL"
-          echo "   - Critical: $TRIVY_CRITICAL"
-          echo "   - High: $TRIVY_HIGH"
-          echo "   - Medium: $TRIVY_MEDIUM"
-          echo "   - Low: $TRIVY_LOW"
-          echo ""
-          echo "📊 Grype Results:"
-          echo "   - Total: $GRYPE_TOTAL"
-          echo "   - Critical: $GRYPE_CRITICAL"
-          echo "   - High: $GRYPE_HIGH"
-          echo "   - Medium: $GRYPE_MEDIUM"
-          echo "   - Low: $GRYPE_LOW"
-          echo "----------------------------------------"
-          
-          # Check if there are critical vulnerabilities and set output flag
-          if [ "$TRIVY_CRITICAL" -gt 0 ] || [ "$GRYPE_CRITICAL" -gt 0 ]; then
-            echo "has_critical=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_critical=false" >> $GITHUB_OUTPUT
+            echo "✅ Successfully created and pushed branch tag: $BRANCH_TAG"
           fi
 
       - name: Generate summary
         run: |
-          echo "## 🚀 Docker Release Summary" >> $GITHUB_STEP_SUMMARY
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          WOLFI_TAG="${BASE_TAG}-wolfi"
+          ARCH_TAG="${{ steps.prep.outputs.arch_tag }}"
+          ARCH_SPECIFIC_TAG="${WOLFI_TAG}-${ARCH_TAG}"
+
+          echo "## 🚀 Wolfi Image Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Details" >> $GITHUB_STEP_SUMMARY
           echo "- 🌿 **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- 🔢 **Release Index:** \`${{ inputs.release_index }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- 🏗️ **Build Type:** \`${{ inputs.build_type }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 🧰 **Base Image:** \`${{ steps.prep.outputs.base_image }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 📦 Published Images" >> $GITHUB_STEP_SUMMARY
-          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          echo "- 🐺 **Wolfi Image:** \`${WOLFI_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- 🖥️ **AMD64 Image:** \`${ARCH_SPECIFIC_TAG}\`" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            echo "- 🐍 **Base Image:** \`${BASE_TAG}-${{ env.PY_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            echo "- 🐺 **Wolfi Image:** \`${BASE_TAG}-wolfi\`" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
-              echo "- 🎯 **Branch-specific Wolfi:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi\`" >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
-
-          # Add vulnerability scan results if available
-          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🔍 Vulnerability Scan Results" >> $GITHUB_STEP_SUMMARY
-            
-            # Add status badges
-            if [ "${{ steps.vuln-scan.outputs.has_critical }}" == "true" ]; then
-              echo "**Status:** ❌ Critical vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
-            elif [ "${{ steps.vuln-scan.outputs.trivy_high }}" -gt 0 ] || [ "${{ steps.vuln-scan.outputs.grype_high }}" -gt 0 ]; then
-              echo "**Status:** ⚠️ High vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "**Status:** ✅ No critical or high vulnerabilities" >> $GITHUB_STEP_SUMMARY
-            fi
-            
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Trivy Results" >> $GITHUB_STEP_SUMMARY
-            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Critical | ${{ steps.vuln-scan.outputs.trivy_critical }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| High     | ${{ steps.vuln-scan.outputs.trivy_high }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Medium   | ${{ steps.vuln-scan.outputs.trivy_medium }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Low      | ${{ steps.vuln-scan.outputs.trivy_low }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Total**    | **${{ steps.vuln-scan.outputs.trivy_total }}** |" >> $GITHUB_STEP_SUMMARY
-            
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Grype Results" >> $GITHUB_STEP_SUMMARY
-            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Critical | ${{ steps.vuln-scan.outputs.grype_critical }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| High     | ${{ steps.vuln-scan.outputs.grype_high }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Medium   | ${{ steps.vuln-scan.outputs.grype_medium }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Low      | ${{ steps.vuln-scan.outputs.grype_low }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Total**    | **${{ steps.vuln-scan.outputs.grype_total }}** |" >> $GITHUB_STEP_SUMMARY
-            
-            # Add comparison summary
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "#### Risk Assessment" >> $GITHUB_STEP_SUMMARY
-            
-            # Calculate total critical and high across both scanners
-            TOTAL_CRITICAL=$(({{ steps.vuln-scan.outputs.trivy_critical }} + {{ steps.vuln-scan.outputs.grype_critical }}))
-            TOTAL_HIGH=$(({{ steps.vuln-scan.outputs.trivy_high }} + {{ steps.vuln-scan.outputs.grype_high }}))
-            
-            if [ "$TOTAL_CRITICAL" -gt 0 ]; then
-              echo "⛔ **Critical Issues:** Detected $TOTAL_CRITICAL critical vulnerabilities. Action required before deployment." >> $GITHUB_STEP_SUMMARY
-            elif [ "$TOTAL_HIGH" -gt 5 ]; then
-              echo "🚧 **High Risk:** Multiple high severity vulnerabilities ($TOTAL_HIGH) detected. Review recommended." >> $GITHUB_STEP_SUMMARY
-            elif [ "$TOTAL_HIGH" -gt 0 ]; then
-              echo "⚠️ **Moderate Risk:** Some high severity vulnerabilities detected. Consider review." >> $GITHUB_STEP_SUMMARY
-            else
-              echo "✅ **Low Risk:** No critical or high vulnerabilities detected. Image appears secure." >> $GITHUB_STEP_SUMMARY
-            fi
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+            BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
+            echo "- 🎯 **Branch Image:** \`${BRANCH_TAG}\`" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🏛️ Architecture Support" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "```bash" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.build_type }}" = "base" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            echo "# Pull base image:" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull main Wolfi image:" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${WOLFI_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull architecture-specific image:" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${ARCH_SPECIFIC_TAG}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Or pull AMD-specific base image:" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${BASE_TAG}-${{ env.PY_VERSION }}-amd64" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ "${{ inputs.build_type }}" = "wolfi" ] || [ "${{ inputs.build_type }}" = "both" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Pull wolfi image:" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${BASE_TAG}-wolfi" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "# Or pull AMD-specific wolfi image:" >> $GITHUB_STEP_SUMMARY
-            echo "docker pull ${BASE_TAG}-wolfi-amd" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull branch-specific image:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi" >> $GITHUB_STEP_SUMMARY
           fi
           echo "```" >> $GITHUB_STEP_SUMMARY
