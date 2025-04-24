@@ -37,25 +37,23 @@ interface TelemetryPixelProps {
  * @returns {JSX.Element | null} The rendered TelemetryPixel component.
  */
 
-// const PIXEL_ID = '0d3461e1-abb1-4691-a0aa-5ed50de66af0';
+const PIXEL_ID = '0d3461e1-abb1-4691-a0aa-5ed50de66af0';
 
-const TelemetryPixel = () //   {
-//   version = 'unknownVersion',
-//   sha = 'unknownSHA',
-//   build = 'unknownBuild',
-// }: TelemetryPixelProps
-: ReactElement | null => (
-  // const pixelPath = `https://apachesuperset.gateway.scarf.sh/pixel/${PIXEL_ID}/${version}/${sha}/${build}`;
-  <span>.</span>
-);
-// return process.env.SCARF_ANALYTICS === 'false' ? null : (
-//   <img
-//     // @ts-ignore
-//     referrerPolicy="no-referrer-when-downgrade"
-//     src={pixelPath}
-//     width={0}
-//     height={0}
-//     alt=""
-//   />
-// );
+const TelemetryPixel = ({
+  version = 'unknownVersion',
+  sha = 'unknownSHA',
+  build = 'unknownBuild',
+}: TelemetryPixelProps): ReactElement | null => {
+  const pixelPath = `https://apachesuperset.gateway.scarf.sh/pixel/${PIXEL_ID}/${version}/${sha}/${build}`;
+  return process.env.SCARF_ANALYTICS === 'false' ? null : (
+    <img
+      // @ts-ignore
+      referrerPolicy="no-referrer-when-downgrade"
+      src={pixelPath}
+      width={0}
+      height={0}
+      alt=""
+    />
+  );
+};
 export default TelemetryPixel;
