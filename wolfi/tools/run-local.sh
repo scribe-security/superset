@@ -56,6 +56,7 @@ docker tag ${BASE_IMAGE} wolfi-base-temp:latest
 
 # Build the Wolfi image with the tagged base image
 docker build \
+    --no-cache \
     --build-arg BASE_IMAGE="wolfi-base-temp:latest" \
     -t ${WOLFI_IMAGE} \
     -f wolfi/Dockerfile.wolfi \
@@ -82,12 +83,37 @@ version: '3'
 services:
   superset:
     image: ${WOLFI_IMAGE}
+    volumes:
+      - ./superset-frontend:/app/superset-frontend
+      - ./superset/static/assets:/app/superset/static/assets
+    environment:
+      FLASK_ENV: development
+      SUPERSET_ENV: development
+      SUPERSET_LOAD_EXAMPLES: "yes"
+      CYPRESS_CONFIG: "${CYPRESS_CONFIG:-}"
   superset-init:
     image: ${WOLFI_IMAGE}
   superset-worker:
     image: ${WOLFI_IMAGE}
   superset-worker-beat:
     image: ${WOLFI_IMAGE}
+  # Add a frontend node service for development
+  superset-node:
+    image: node:18
+    container_name: superset_node
+    command: ["/app/docker/docker-frontend-dev.sh"]
+    environment:
+      - NODE_ENV=development
+      - BUILD_SUPERSET_FRONTEND_IN_DOCKER=true
+    depends_on:
+      - superset
+    volumes:
+      - ./docker:/app/docker
+      - ./superset-frontend:/app/superset-frontend
+      - ./superset:/app/superset
+      - superset_home:/app/superset_home
+    ports:
+      - "9009:9009"
 EOF
 
 # Run docker-compose with the Wolfi-built image

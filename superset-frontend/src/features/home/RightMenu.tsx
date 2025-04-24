@@ -596,6 +596,7 @@ const RightMenu = ({
           {t('Login')}
         </StyledAnchor>
       )}
+      asdf asdfasdfasfasdfa
       <TelemetryPixel
         version={navbarRight.version_string}
         sha={navbarRight.version_sha}
