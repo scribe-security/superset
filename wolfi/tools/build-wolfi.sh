@@ -1,18 +1,35 @@
 #!/bin/bash
 set -e
 
-# Test the Wolfi build flow locally
-# This script simulates the GitHub workflow by building the base image first and then using it for the Wolfi build
+# Wolfi Build Tool - Builds a secure Wolfi-based Superset image
+# Usage: 
+#   ./build-wolfi.sh                   # Default local build
+#   ./build-wolfi.sh -p                # Push images to registry
+#   ./build-wolfi.sh -r my-registry    # Specify registry name
+#   ./build-wolfi.sh -i my-index       # Specify release index
 
-# Navigate to the main Superset directory
-cd /Users/scribe/Projects/sps3/superset
+# Navigate to the Superset root directory
+cd $(dirname "$0")/../../
 
-# Configuration
+# Default values
+PUSH=false
 REGISTRY="local-test"
 IMAGE_NAME="superset"
 REF_NAME=$(git branch --show-current)
 RELEASE_INDEX="1"
 PY_VERSION="py311"
+CHECK_SECURITY=false
+
+# Parse arguments
+while getopts "pr:i:s" opt; do
+  case $opt in
+    p) PUSH=true ;;
+    r) REGISTRY="$OPTARG" ;;
+    i) RELEASE_INDEX="$OPTARG" ;;
+    s) CHECK_SECURITY=true ;;
+    \?) echo "Invalid option -$OPTARG" >&2; exit 1 ;;
+  esac
+done
 
 # Define image tags
 BASE_TAG="${REGISTRY}/${IMAGE_NAME}:${REF_NAME}-${RELEASE_INDEX}"
@@ -42,6 +59,20 @@ docker build \
   .
 
 echo "✅ Wolfi image built successfully!"
+
+# Check for vulnerabilities if requested
+if [ "$CHECK_SECURITY" = true ]; then
+  echo "🔷 Step 4: Checking for vulnerabilities..."
+  wolfi/security/check-vulnerabilities.sh ${WOLFI_TAG}
+fi
+
+# Push images if requested
+if [ "$PUSH" = true ]; then
+  echo "🔷 Pushing images to registry..."
+  docker push ${BASE_IMAGE}
+  docker push ${WOLFI_TAG}
+  echo "✅ Images pushed to registry"
+fi
 
 echo ""
 echo "📋 Build Summary"

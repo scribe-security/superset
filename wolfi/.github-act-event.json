@@ -1,7 +1,0 @@
-{
-  "action": "workflow_dispatch",
-  "inputs": {
-    "release_index": "test-001",
-    "build_type": "wolfi"
-  }
-}
