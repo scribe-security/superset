@@ -81,6 +81,7 @@ jobs:
             -t $BASE_IMAGE \
             --target dev \
             --build-arg PY_VER=${{ env.PY_VER_ARG }} \
+            --build-arg SCARF_ANALYTICS=${{ env.SCARF_ANALYTICS }} \
             .
 
           # Push the base image

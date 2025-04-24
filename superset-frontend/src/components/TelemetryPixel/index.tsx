@@ -46,7 +46,7 @@ const TelemetryPixel = () //   {
 // }: TelemetryPixelProps
 : ReactElement | null => {
   // const pixelPath = `https://apachesuperset.gateway.scarf.sh/pixel/${PIXEL_ID}/${version}/${sha}/${build}`;
-  return <></>;
+  return <span>.</span></>;
   // return process.env.SCARF_ANALYTICS === 'false' ? null : (
   //   <img
   //     // @ts-ignore
