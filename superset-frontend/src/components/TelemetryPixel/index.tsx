@@ -45,7 +45,11 @@ const TelemetryPixel = ({
   build = 'unknownBuild',
 }: TelemetryPixelProps): ReactElement | null => {
   const pixelPath = `https://apachesuperset.gateway.scarf.sh/pixel/${PIXEL_ID}/${version}/${sha}/${build}`;
-  return process.env.SCARF_ANALYTICS === 'false' ? null : (
+  // Added debug logging to help troubleshoot
+  console.log('SCARF_ANALYTICS value:', process.env.SCARF_ANALYTICS);
+  // Disable telemetry if SCARF_ANALYTICS is 'false' or any falsy value
+  return process.env.SCARF_ANALYTICS === 'false' ||
+    !process.env.SCARF_ANALYTICS ? null : (
     <img
       // @ts-ignore
       referrerPolicy="no-referrer-when-downgrade"
