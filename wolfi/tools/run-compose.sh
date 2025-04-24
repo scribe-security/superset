@@ -17,9 +17,9 @@ echo "Using base image: ${BASE_IMAGE}"
 
 # Check if .env file exists
 if [ ! -f "docker/.env" ]; then
-	echo "❌ Error: docker/.env file not found"
-	echo "Please create it by copying docker/.env-non-dev to docker/.env"
-	exit 1
+    echo "❌ Error: docker/.env file not found"
+    echo "Please create it by copying docker/.env-non-dev to docker/.env"
+    exit 1
 fi
 
 # Set the BASE_IMAGE environment variable
@@ -28,12 +28,19 @@ export BASE_IMAGE="${BASE_IMAGE}"
 echo "Using standard docker-compose.yml with SUPERSET_IMAGE override"
 export SUPERSET_IMAGE="apache/superset:wolfi-local"
 
-# Build the Wolfi image first
+# Tag the base image to avoid ARG issues
+echo "🔷 Tagging base image for build..."
+docker tag ${BASE_IMAGE} wolfi-base-temp:latest
+
+# Build the Wolfi image
 docker build \
-	--build-arg BASE_IMAGE="${BASE_IMAGE}" \
-	-t apache/superset:wolfi-local \
-	-f wolfi/Dockerfile.wolfi \
-	.
+    --build-arg BASE_IMAGE="wolfi-base-temp:latest" \
+    -t apache/superset:wolfi-local \
+    -f wolfi/Dockerfile.wolfi \
+    .
+
+# Clean up the temporary tag
+docker rmi wolfi-base-temp:latest || true
 
 # Run standard docker-compose
 docker compose -f docker-compose.yml up -d

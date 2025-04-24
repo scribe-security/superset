@@ -7,6 +7,7 @@ set -e
 #   ./build-wolfi.sh -p                # Push images to registry
 #   ./build-wolfi.sh -r my-registry    # Specify registry name
 #   ./build-wolfi.sh -i my-index       # Specify release index
+#   ./build-wolfi.sh -s                # Check for security vulnerabilities
 
 # Navigate to the Superset root directory
 cd $(dirname "$0")/../../
@@ -52,11 +53,18 @@ mkdir -p docker/pythonpath
 cp wolfi/docker/pythonpath/* docker/pythonpath/ || true
 
 echo "🔷 Step 3: Building Wolfi image using the base image..."
+# Tag the base image to avoid ARG issues
+docker tag ${BASE_IMAGE} wolfi-base-temp:latest
+
+# Build using the tagged image
 docker build \
   -f wolfi/Dockerfile.wolfi \
   -t ${WOLFI_TAG} \
-  --build-arg BASE_IMAGE=${BASE_IMAGE} \
+  --build-arg BASE_IMAGE=wolfi-base-temp:latest \
   .
+
+# Clean up temporary tag
+docker rmi wolfi-base-temp:latest || true
 
 echo "✅ Wolfi image built successfully!"
 
