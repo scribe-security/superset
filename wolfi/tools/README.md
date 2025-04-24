@@ -30,11 +30,14 @@ Builds a secure Wolfi-based Superset image from your local codebase.
 Runs a secure Wolfi-based Superset image locally with docker-compose.
 
 ```bash
-# Use default base image
+# Build image from docker-compose.yml and use it as base
 ./run-local.sh
 
-# Specify base image
-./run-local.sh apache/superset:latest-dev
+# Skip local build and use existing apache/superset:latest-dev
+./run-local.sh --no-build
+
+# Specify custom base image
+./run-local.sh apache/superset:custom-tag
 ```
 
 ### run-compose.sh

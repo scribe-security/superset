@@ -3,21 +3,47 @@ set -e
 
 # Wolfi Run Tool - Runs a secure Wolfi-based Superset image locally
 # Usage: 
-#   ./run-local.sh                   # Use default base image
-#   ./run-local.sh apache/superset:latest-dev  # Specify base image
+#   ./run-local.sh                   # Build and use local image from docker-compose.yml
+#   ./run-local.sh --no-build        # Use existing apache/superset:latest-dev image (no build)
+#   ./run-local.sh custom/image:tag  # Specify custom base image
 
 # Navigate to the Superset root directory
 cd $(dirname "$0")/../../
 
-# Default values
-BASE_IMAGE=${1:-"apache/superset:latest-dev"}
+# Parse arguments
+BUILD_LOCAL=true
+CUSTOM_IMAGE=""
+
+if [ "$1" == "--no-build" ]; then
+    BUILD_LOCAL=false
+    BASE_IMAGE="apache/superset:latest-dev"
+elif [ -n "$1" ]; then
+    BUILD_LOCAL=false
+    BASE_IMAGE="$1"
+else
+    BUILD_LOCAL=true
+    BASE_IMAGE="apache/superset:latest-dev"
+fi
+
 WOLFI_IMAGE="apache/superset:wolfi-local"
 
-# Ensure BASE_IMAGE is not empty
-if [ -z "$BASE_IMAGE" ]; then
-    echo "❌ Error: BASE_IMAGE cannot be empty"
-    echo "Please provide a valid base image as parameter or use the default"
-    exit 1
+# Build local image from docker-compose if needed
+if [ "$BUILD_LOCAL" = true ]; then
+    echo "🔷 Building base image from docker-compose.yml..."
+    
+    # Build the base Superset image with docker-compose
+    docker compose build superset
+    
+    # Tag the newly built image as apache/superset:latest-dev
+    COMPOSE_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "superset-superset" | head -n 1)
+    
+    if [ -n "$COMPOSE_IMAGE" ]; then
+        echo "🔷 Tagging docker-compose built image as ${BASE_IMAGE}..."
+        docker tag ${COMPOSE_IMAGE} ${BASE_IMAGE}
+    else
+        echo "⚠️ Warning: Could not find docker-compose built image."
+        echo "Continuing with existing ${BASE_IMAGE} image..."
+    fi
 fi
 
 echo "🔷 Building Wolfi-based Superset image from your branch..."
