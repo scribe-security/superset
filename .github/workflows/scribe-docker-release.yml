@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: superset
   PY_VERSION: "py311"
   PY_VER_ARG: "3.11-slim-bookworm"
-  WOLFI_BRANCH: "4.1.2-wolfi"
+  WOLFI_BRANCH: "wolfi"
 
 jobs:
   build:
