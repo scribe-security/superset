@@ -76,8 +76,8 @@ jobs:
           BASE_IMAGE="${{ steps.prep.outputs.base_image }}"
           echo "Base image will be: $BASE_IMAGE"
 
-          # Create a build-specific .env file
-          echo "SCARF_ANALYTICS=false" >> ./docker/.env-build
+          # Instead of using --env-file which isn't supported, export the environment variable directly
+          export SCARF_ANALYTICS=false
           
           # Build the base image using docker-compose build
           docker build \
@@ -85,7 +85,6 @@ jobs:
             --target dev \
             --build-arg PY_VER=${{ env.PY_VER_ARG }} \
             --build-arg SCARF_ANALYTICS=${{ env.SCARF_ANALYTICS }} \
-            --env-file ./docker/.env-build \
             .
 
           # Push the base image
