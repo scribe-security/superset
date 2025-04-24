@@ -44,18 +44,18 @@ const TelemetryPixel = () //   {
 //   sha = 'unknownSHA',
 //   build = 'unknownBuild',
 // }: TelemetryPixelProps
-: ReactElement | null => {
+: ReactElement | null => (
   // const pixelPath = `https://apachesuperset.gateway.scarf.sh/pixel/${PIXEL_ID}/${version}/${sha}/${build}`;
-  return <span>.</span></>;
-  // return process.env.SCARF_ANALYTICS === 'false' ? null : (
-  //   <img
-  //     // @ts-ignore
-  //     referrerPolicy="no-referrer-when-downgrade"
-  //     src={pixelPath}
-  //     width={0}
-  //     height={0}
-  //     alt=""
-  //   />
-  // );
-};
+  <span>.</span>
+);
+// return process.env.SCARF_ANALYTICS === 'false' ? null : (
+//   <img
+//     // @ts-ignore
+//     referrerPolicy="no-referrer-when-downgrade"
+//     src={pixelPath}
+//     width={0}
+//     height={0}
+//     alt=""
+//   />
+// );
 export default TelemetryPixel;
