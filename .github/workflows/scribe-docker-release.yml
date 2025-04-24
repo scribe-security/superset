@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: superset
   PY_VERSION: "py311"
   PY_VER_ARG: "3.11-slim-bookworm"
-  WOLFI_BRANCH: "4.1.2-to-wolfie"
+  WOLFI_BRANCH: "4.1.2-wolfi"
 
 jobs:
   build:
@@ -74,17 +74,17 @@ jobs:
           # Define the base image tag
           BASE_IMAGE="${{ steps.prep.outputs.base_image }}"
           echo "Base image will be: $BASE_IMAGE"
-          
+
           # Build the base image using docker-compose build
           docker build \
             -t $BASE_IMAGE \
             --target dev \
             --build-arg PY_VER=${{ env.PY_VER_ARG }} \
             .
-          
+
           # Push the base image
           docker push $BASE_IMAGE
-          
+
           echo "✅ Successfully built and pushed base image: $BASE_IMAGE"
 
       - name: Build and push Wolfi image
