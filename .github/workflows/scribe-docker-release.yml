@@ -13,6 +13,7 @@ env:
   PY_VERSION: "py311"
   PY_VER_ARG: "3.11-slim-bookworm"
   WOLFI_BRANCH: "wolfi"
+  SCARF_ANALYTICS: "false"
 
 jobs:
   build:
@@ -97,6 +98,7 @@ jobs:
           tags: ${{ steps.prep.outputs.tags }}
           build-args: |
             BASE_IMAGE=${{ steps.prep.outputs.base_image }}
+            SCARF_ANALYTICS=false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
