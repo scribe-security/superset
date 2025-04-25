@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64] # Build only for AMD architecture
+        platform: [linux/amd64, linux/arm64] # Added ARM64 architecture
       fail-fast: false
     steps:
       - name: Checkout
@@ -33,36 +33,56 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64 # Enable QEMU for ARM64 emulation
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Prepare Build Variables
         id: prep
         run: |
-          # Normalize platform to arch tag
+          # This step prepares all the build variables needed for architecture-specific builds
+          # It handles the different naming conventions for AMD64 vs ARM64 images
+
+          # Convert the platform (linux/amd64 or linux/arm64) to a short architecture tag (amd or arm)
+          # This keeps image tags concise while still indicating the architecture
           ARCH_TAG="${{ matrix.platform == 'linux/amd64' && 'amd' || 'arm' }}"
 
-          # Base tag pattern
+          # Create the base tag that all image versions will be derived from
+          # Format: registry/image:branch-releaseindex
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
 
-          # Wolfi tag
+          # Create the architecture-specific Wolfi tag
+          # Format: registry/image:branch-releaseindex-wolfi-arch
           WOLFI_TAG="${BASE_TAG}-wolfi-${ARCH_TAG}"
 
-          # Add branch-specific tag if applicable
+          # For branch builds (e.g., wolfi branch), create an additional branch-specific tag
+          # This allows users to always pull the latest from a specific branch
           if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
             TAGS="${WOLFI_TAG},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi-${ARCH_TAG}"
           else
             TAGS="${WOLFI_TAG}"
           fi
 
-          # Use existing base image as the build base
+          # Determine the base image to use for this build
+          # The base image is what the Wolfi Dockerfile uses as its starting point
           BASE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}-${{ env.PY_VERSION }}"
 
-          # Output variables
+          # For ARM64 builds, we need to use the ARM64-specific base image
+          # This is crucial for multi-architecture support
+          if [ "${{ matrix.platform }}" = "linux/arm64" ]; then
+            BASE_IMAGE="${BASE_IMAGE}-arm64"
+          fi
+
+          # Export all these variables for use in subsequent steps
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "base_image=$BASE_IMAGE" >> $GITHUB_OUTPUT
           echo "arch_tag=$ARCH_TAG" >> $GITHUB_OUTPUT
           echo "wolfi_tag=$WOLFI_TAG" >> $GITHUB_OUTPUT
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_OUTPUT
 
       - name: Prepare Wolfi files
         run: |
@@ -71,24 +91,23 @@ jobs:
 
       - name: Build base image first
         run: |
-          echo "Building base image from docker-compose.yml..."
+          echo "Building base image for ${{ steps.prep.outputs.platform }}..."
           # Define the base image tag
           BASE_IMAGE="${{ steps.prep.outputs.base_image }}"
           echo "Base image will be: $BASE_IMAGE"
 
           # Instead of using --env-file which isn't supported, export the environment variable directly
           export SCARF_ANALYTICS=false
-          
+
           # Build the base image using docker-compose build
-          docker build \
+          docker buildx build \
             -t $BASE_IMAGE \
             --target dev \
+            --platform ${{ steps.prep.outputs.platform }} \
             --build-arg PY_VER=${{ env.PY_VER_ARG }} \
             --build-arg SCARF_ANALYTICS=${{ env.SCARF_ANALYTICS }} \
+            --push \
             .
-
-          # Push the base image
-          docker push $BASE_IMAGE
 
           echo "✅ Successfully built and pushed base image: $BASE_IMAGE"
 
@@ -113,66 +132,194 @@ jobs:
           ARCH_TAG="${{ steps.prep.outputs.arch_tag }}"
           ARCH_SPECIFIC_TAG="${WOLFI_TAG}-${ARCH_TAG}"
 
-          echo "Creating main tag for Wolfi image..."
+          echo "Creating architecture-specific tag for Wolfi image..."
           docker pull $ARCH_SPECIFIC_TAG
-          docker tag $ARCH_SPECIFIC_TAG $WOLFI_TAG
-          docker push $WOLFI_TAG
 
-          echo "✅ Successfully created and pushed: $WOLFI_TAG"
+          # Skip creating combined tags for each architecture - we'll do that in the manifest job
+          if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
+            echo "Creating main tag for AMD64 image..."
+            docker tag $ARCH_SPECIFIC_TAG $WOLFI_TAG
+            docker push $WOLFI_TAG
+            echo "✅ Successfully created and pushed: $WOLFI_TAG"
+          fi
 
-          # Create branch-specific tag if applicable
+          # Create branch-specific architecture tag if applicable
           if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
             BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
             BRANCH_ARCH_TAG="${BRANCH_TAG}-${ARCH_TAG}"
             
-            echo "Creating branch-specific tag..."
+            echo "Creating branch-specific architecture tag..."
             docker pull $BRANCH_ARCH_TAG
-            docker tag $BRANCH_ARCH_TAG $BRANCH_TAG
-            docker push $BRANCH_TAG
             
-            echo "✅ Successfully created and pushed branch tag: $BRANCH_TAG"
+            if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
+              echo "Creating branch tag for AMD64 image..."
+              docker tag $BRANCH_ARCH_TAG $BRANCH_TAG
+              docker push $BRANCH_TAG
+              echo "✅ Successfully created and pushed branch tag: $BRANCH_TAG"
+            fi
           fi
 
       - name: Generate summary
         run: |
+          # This step creates a detailed summary of the built images for this architecture
+          # The summary helps track what was built and provides useful commands for users
+
+          # Setup tag variables
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
           WOLFI_TAG="${BASE_TAG}-wolfi"
           ARCH_TAG="${{ steps.prep.outputs.arch_tag }}"
           ARCH_SPECIFIC_TAG="${WOLFI_TAG}-${ARCH_TAG}"
 
+          # Start building the GitHub step summary with a header
           echo "## 🚀 Wolfi Image Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Details" >> $GITHUB_STEP_SUMMARY
           echo "- 🌿 **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- 🔢 **Release Index:** \`${{ inputs.release_index }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- 🧰 **Base Image:** \`${{ steps.prep.outputs.base_image }}\`" >> $GITHUB_STEP_SUMMARY
+          # Include platform info (amd64 or arm64) to clearly indicate architecture
+          echo "- 🖥️ **Platform:** \`${{ steps.prep.outputs.platform }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 📦 Published Images" >> $GITHUB_STEP_SUMMARY
-          echo "- 🐺 **Wolfi Image:** \`${WOLFI_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- 🖥️ **AMD64 Image:** \`${ARCH_SPECIFIC_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          # Always show the architecture-specific image that was built
+          echo "- 🐺 **Architecture Image:** \`${ARCH_SPECIFIC_TAG}\`" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+          # Only show the main tag for AMD64 builds (ARM will be combined in the manifest job)
+          if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
+            echo "- 🐺 **Main Wolfi Image:** \`${WOLFI_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # For branch builds (e.g., wolfi branch), show the branch-specific tag as well
+          # Only for AMD64 as the ARM version will be combined in the manifest 
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ] && [ "${{ matrix.platform }}" = "linux/amd64" ]; then
             BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
             echo "- 🎯 **Branch Image:** \`${BRANCH_TAG}\`" >> $GITHUB_STEP_SUMMARY
           fi
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🏛️ Architecture Support" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
-
+          # Add handy pull commands section for users
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "```bash" >> $GITHUB_STEP_SUMMARY
-          echo "# Pull main Wolfi image:" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${WOLFI_TAG}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          # Always show how to pull the arch-specific image
           echo "# Pull architecture-specific image:" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${ARCH_SPECIFIC_TAG}" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+          # For AMD64, also show how to pull the main image
+          if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull main Wolfi image:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${WOLFI_TAG}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # For branch builds, show how to pull the branch image (AMD64 only)
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ] && [ "${{ matrix.platform }}" = "linux/amd64" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "# Pull branch-specific image:" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
+  # Create a multi-arch manifest after building individual architectures
+  manifest:
+    name: Create Multi-arch Manifest
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Docker Setup
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and Push Multi-arch Manifest
+        run: |
+          # This step creates Docker manifest lists that combine AMD64 and ARM64 images
+          # Manifests allow Docker to automatically pull the right architecture on different systems
+
+          # Setup tag variables
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          WOLFI_TAG="${BASE_TAG}-wolfi"
+          AMD_TAG="${WOLFI_TAG}-amd"  # The AMD64 specific image
+          ARM_TAG="${WOLFI_TAG}-arm"  # The ARM64 specific image
+
+          echo "Creating multi-arch manifest for ${WOLFI_TAG}..."
+
+          # Create a manifest list that references both architecture-specific images
+          # This is what enables cross-platform compatibility with a single image tag
+          docker manifest create ${WOLFI_TAG} \
+            --amend ${AMD_TAG} \
+            --amend ${ARM_TAG}
+
+          # Push the manifest list to Docker Hub
+          docker manifest push ${WOLFI_TAG}
+
+          echo "✅ Successfully created and pushed multi-arch manifest: ${WOLFI_TAG}"
+
+          # For branch builds (e.g., wolfi branch), create a branch-specific manifest too
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+            BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
+            BRANCH_AMD_TAG="${BRANCH_TAG}-amd"
+            BRANCH_ARM_TAG="${BRANCH_TAG}-arm"
+            
+            echo "Creating multi-arch manifest for ${BRANCH_TAG}..."
+            
+            # Create manifest list for the branch-specific tag
+            # This lets users pull the latest version from a branch with cross-platform support
+            docker manifest create ${BRANCH_TAG} \
+              --amend ${BRANCH_AMD_TAG} \
+              --amend ${BRANCH_ARM_TAG}
+              
+            # Push the branch-specific manifest to Docker Hub
+            docker manifest push ${BRANCH_TAG}
+            
+            echo "✅ Successfully created and pushed branch multi-arch manifest: ${BRANCH_TAG}"
+          fi
+
+      - name: Generate Summary
+        run: |
+          # This step creates a summary for the multi-architecture manifest job
+          # The manifest combines AMD64 and ARM64 builds into a single, architecture-aware image
+
+          # Setup tag variables
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
+          WOLFI_TAG="${BASE_TAG}-wolfi"
+
+          # Create the manifest summary header
+          echo "## 🚀 Multi-architecture Manifest Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # List the main multi-arch image that was created
+          echo "### 📦 Published Manifests" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐺 **Multi-arch Image:** \`${WOLFI_TAG}\`" >> $GITHUB_STEP_SUMMARY
+
+          # If this is a branch build (e.g., wolfi branch), show the branch-specific manifest too
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+            BRANCH_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi"
+            echo "- 🎯 **Branch Multi-arch Image:** \`${BRANCH_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Clearly show which architectures are supported by this manifest
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏛️ Architecture Support" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ linux/arm64" >> $GITHUB_STEP_SUMMARY
+
+          # Add useful Docker pull commands for the multi-arch images
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo "```bash" >> $GITHUB_STEP_SUMMARY
+          # The beauty of multi-arch manifests is that Docker automatically selects the right architecture
+          echo "# Pull multi-arch image (will select appropriate architecture automatically):" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${WOLFI_TAG}" >> $GITHUB_STEP_SUMMARY
+
+          # For branch builds, show how to pull the branch-specific multi-arch image
+          if [ "${{ github.ref_name }}" = "${{ env.WOLFI_BRANCH }}" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Pull branch multi-arch image:" >> $GITHUB_STEP_SUMMARY
             echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.WOLFI_BRANCH }}-wolfi" >> $GITHUB_STEP_SUMMARY
           fi
           echo "```" >> $GITHUB_STEP_SUMMARY

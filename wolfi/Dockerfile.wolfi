@@ -83,13 +83,6 @@ RUN pip3.11 install --upgrade pip setuptools wheel flask-cors && \
   # Run a quick test to verify psycopg2 installation
   python -c "import psycopg2; print(f'Successfully installed psycopg2 {psycopg2.__version__}')"
 
-# Install Geckodriver only (dockerize not needed)
-ENV GECKODRIVER_VERSION=0.36.0
-RUN wget -q "https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VERSION}/geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz" && \
-  tar -xzf geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz -C /usr/bin geckodriver && \
-  chmod +x /usr/bin/geckodriver && \
-  rm -rf geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz
-
 # Run security updates on base OS packages
 RUN apk upgrade --no-cache
 
