@@ -133,8 +133,10 @@ jobs:
           ARCH_SPECIFIC_TAG="${WOLFI_TAG}-${ARCH_TAG}"
 
           echo "Creating architecture-specific tag for Wolfi image..."
-          docker pull $ARCH_SPECIFIC_TAG
-
+          
+          # Pull with explicit platform flag to avoid architecture mismatch errors
+          docker pull --platform ${{ matrix.platform }} $ARCH_SPECIFIC_TAG
+          
           # Skip creating combined tags for each architecture - we'll do that in the manifest job
           if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
             echo "Creating main tag for AMD64 image..."
@@ -149,7 +151,8 @@ jobs:
             BRANCH_ARCH_TAG="${BRANCH_TAG}-${ARCH_TAG}"
             
             echo "Creating branch-specific architecture tag..."
-            docker pull $BRANCH_ARCH_TAG
+            # Again, pull with explicit platform flag
+            docker pull --platform ${{ matrix.platform }} $BRANCH_ARCH_TAG
             
             if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
               echo "Creating branch tag for AMD64 image..."
@@ -247,16 +250,28 @@ jobs:
           ARM_TAG="${WOLFI_TAG}-arm"  # The ARM64 specific image
 
           echo "Creating multi-arch manifest for ${WOLFI_TAG}..."
-
+          
+          # Verify that both architecture images exist
+          echo "Verifying AMD64 image exists..."
+          docker manifest inspect ${AMD_TAG} > /dev/null || { echo "❌ AMD64 image ${AMD_TAG} not found"; exit 1; }
+          
+          echo "Verifying ARM64 image exists..."
+          docker manifest inspect ${ARM_TAG} > /dev/null || { echo "❌ ARM64 image ${ARM_TAG} not found"; exit 1; }
+          
           # Create a manifest list that references both architecture-specific images
           # This is what enables cross-platform compatibility with a single image tag
+          echo "Creating manifest for ${WOLFI_TAG}..."
           docker manifest create ${WOLFI_TAG} \
             --amend ${AMD_TAG} \
             --amend ${ARM_TAG}
-
+          
+          # Annotate the manifest to specify platform details
+          docker manifest annotate ${WOLFI_TAG} ${AMD_TAG} --os linux --arch amd64
+          docker manifest annotate ${WOLFI_TAG} ${ARM_TAG} --os linux --arch arm64
+          
           # Push the manifest list to Docker Hub
           docker manifest push ${WOLFI_TAG}
-
+          
           echo "✅ Successfully created and pushed multi-arch manifest: ${WOLFI_TAG}"
 
           # For branch builds (e.g., wolfi branch), create a branch-specific manifest too
@@ -267,11 +282,22 @@ jobs:
             
             echo "Creating multi-arch manifest for ${BRANCH_TAG}..."
             
+            # Verify branch-specific architecture images exist
+            echo "Verifying branch AMD64 image exists..."
+            docker manifest inspect ${BRANCH_AMD_TAG} > /dev/null || { echo "❌ Branch AMD64 image ${BRANCH_AMD_TAG} not found"; exit 1; }
+            
+            echo "Verifying branch ARM64 image exists..."
+            docker manifest inspect ${BRANCH_ARM_TAG} > /dev/null || { echo "❌ Branch ARM64 image ${BRANCH_ARM_TAG} not found"; exit 1; }
+            
             # Create manifest list for the branch-specific tag
             # This lets users pull the latest version from a branch with cross-platform support
             docker manifest create ${BRANCH_TAG} \
               --amend ${BRANCH_AMD_TAG} \
               --amend ${BRANCH_ARM_TAG}
+            
+            # Annotate the branch manifest
+            docker manifest annotate ${BRANCH_TAG} ${BRANCH_AMD_TAG} --os linux --arch amd64
+            docker manifest annotate ${BRANCH_TAG} ${BRANCH_ARM_TAG} --os linux --arch arm64
               
             # Push the branch-specific manifest to Docker Hub
             docker manifest push ${BRANCH_TAG}
