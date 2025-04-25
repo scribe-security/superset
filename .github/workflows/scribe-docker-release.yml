@@ -249,35 +249,31 @@ jobs:
           # Setup tag variables
           BASE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ inputs.release_index }}"
           WOLFI_TAG="${BASE_TAG}-wolfi"
-
-          # Define platform-specific digests to ensure we're using the exact image for each architecture
-          echo "Getting AMD64 image digest..."
-          AMD_DIGEST=$(docker manifest inspect ${WOLFI_TAG}-amd --verbose | jq -r '.Descriptor.digest')
-          AMD_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${AMD_DIGEST}"
-
-          echo "Getting ARM64 image digest..."
-          ARM_DIGEST=$(docker manifest inspect ${WOLFI_TAG}-arm --verbose | jq -r '.Descriptor.digest')
-          ARM_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${ARM_DIGEST}"
-
+          AMD_TAG="${WOLFI_TAG}-amd"  # The AMD64 specific image
+          ARM_TAG="${WOLFI_TAG}-arm"  # The ARM64 specific image
+          
           echo "Creating multi-arch manifest for ${WOLFI_TAG}..."
-
+          
+          # Debug the manifest structure first to understand it
+          echo "Inspecting AMD64 image manifest structure..."
+          docker manifest inspect ${AMD_TAG} > /tmp/amd_manifest.json
+          cat /tmp/amd_manifest.json
+          
+          # Use simpler approach without trying to extract digests
           # Remove any existing manifest with this name to ensure a clean start
           docker manifest rm ${WOLFI_TAG} 2>/dev/null || true
-
-          # Create a manifest list that references specific image digests by architecture
-          # This avoids issues with nested manifests
+          
+          # Create a manifest list using the tags directly
           echo "Creating manifest for ${WOLFI_TAG}..."
-          docker manifest create ${WOLFI_TAG} \
-            ${AMD_IMAGE} \
-            ${ARM_IMAGE}
-
-          # Annotate the manifest to specify platform details
-          docker manifest annotate ${WOLFI_TAG} ${AMD_IMAGE} --os linux --arch amd64
-          docker manifest annotate ${WOLFI_TAG} ${ARM_IMAGE} --os linux --arch arm64
-
-          # Push the manifest list to Docker Hub
-          docker manifest push ${WOLFI_TAG}
-
+          docker manifest create ${WOLFI_TAG} ${AMD_TAG} ${ARM_TAG}
+          
+          # Annotate the manifest to specify platform details explicitly
+          docker manifest annotate ${WOLFI_TAG} ${AMD_TAG} --os linux --arch amd64
+          docker manifest annotate ${WOLFI_TAG} ${ARM_TAG} --os linux --arch arm64
+          
+          # Push the manifest list to Docker Hub with purge option
+          docker manifest push --purge ${WOLFI_TAG}
+          
           echo "✅ Successfully created and pushed multi-arch manifest: ${WOLFI_TAG}"
 
           # For branch builds (e.g., wolfi branch), create a branch-specific manifest too
@@ -288,30 +284,18 @@ jobs:
             
             echo "Creating multi-arch manifest for ${BRANCH_TAG}..."
             
-            # Get digests for branch images
-            echo "Getting branch AMD64 image digest..."
-            BRANCH_AMD_DIGEST=$(docker manifest inspect ${BRANCH_AMD_TAG} --verbose | jq -r '.Descriptor.digest')
-            BRANCH_AMD_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${BRANCH_AMD_DIGEST}"
-            
-            echo "Getting branch ARM64 image digest..."
-            BRANCH_ARM_DIGEST=$(docker manifest inspect ${BRANCH_ARM_TAG} --verbose | jq -r '.Descriptor.digest')
-            BRANCH_ARM_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${BRANCH_ARM_DIGEST}"
-            
             # Remove any existing manifest with this name
             docker manifest rm ${BRANCH_TAG} 2>/dev/null || true
             
-            # Create manifest list for the branch-specific tag using digests
-            # This lets users pull the latest version from a branch with cross-platform support
-            docker manifest create ${BRANCH_TAG} \
-              ${BRANCH_AMD_IMAGE} \
-              ${BRANCH_ARM_IMAGE}
+            # Create manifest list using the tags directly instead of trying to extract digests
+            docker manifest create ${BRANCH_TAG} ${BRANCH_AMD_TAG} ${BRANCH_ARM_TAG}
             
             # Annotate the branch manifest
-            docker manifest annotate ${BRANCH_TAG} ${BRANCH_AMD_IMAGE} --os linux --arch amd64
-            docker manifest annotate ${BRANCH_TAG} ${BRANCH_ARM_IMAGE} --os linux --arch arm64
+            docker manifest annotate ${BRANCH_TAG} ${BRANCH_AMD_TAG} --os linux --arch amd64
+            docker manifest annotate ${BRANCH_TAG} ${BRANCH_ARM_TAG} --os linux --arch arm64
               
-            # Push the branch-specific manifest to Docker Hub
-            docker manifest push ${BRANCH_TAG}
+            # Push the branch-specific manifest to Docker Hub with purge option
+            docker manifest push --purge ${BRANCH_TAG}
             
             echo "✅ Successfully created and pushed branch multi-arch manifest: ${BRANCH_TAG}"
           fi
