@@ -291,84 +291,113 @@ export default function TableChart<D extends DataRecord = DataRecord>(
   const [hideComparisonKeys, setHideComparisonKeys] = useState<string[]>([]);
   const theme = useTheme();
 
-  const getCellParsms = (value: DataRecordValue) => {
-    let isAnchor = false;
-    let parsedValue = value;
-    if (typeof value === 'string') {
-      const parsed = new DOMParser().parseFromString(value, 'text/html');
-      const element = parsed.body.firstChild as HTMLElement;
-      if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
-        const data = element.getAttribute('data');
-        if (data) {
-          try {
-            parsedValue = JSON.parse(data);
-            isAnchor = true;
-          } catch (error) {
-            parsedValue = value;
-          }
+  /**
+   * Parses a cell value to extract JSON data from anchor tags
+   * @param value - The cell value to parse
+   * @returns Object containing parsed value and whether it's from an anchor tag
+   */
+  const parseCellValue = (
+    value: DataRecordValue,
+  ): { parsedValue: DataRecordValue; isAnchor: boolean } => {
+    // Return original value if not a string
+    if (typeof value !== 'string') {
+      return { parsedValue: value, isAnchor: false };
+    }
+
+    // Parse string as HTML
+    const parsed = new DOMParser().parseFromString(value, 'text/html');
+    const element = parsed.body.firstChild as HTMLElement;
+
+    // Check if it's an anchor with href="#"
+    if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
+      const dataAttr = element.getAttribute('data');
+      if (dataAttr) {
+        try {
+          // Try to parse the data attribute as JSON
+          return {
+            parsedValue: JSON.parse(dataAttr),
+            isAnchor: true,
+          };
+        } catch (error) {
+          // If parsing fails, return the original value
+          console.warn('Failed to parse data attribute in anchor tag', error);
         }
       }
     }
 
-    return { parsedValue, isAnchor };
+    // Default: return original value
+    return { parsedValue: value, isAnchor: false };
   };
 
   const [cellNameWithInfoType, setHasDataInfoTypeInRow] = useState<
-    string | null
-  >(null);
+    string | undefined
+  >();
 
-  const getrowparamsinfotypevalue = rowId => {
-    let isAnchor = false;
-
-    const value = cellNameWithInfoType && data[rowId][cellNameWithInfoType];
-
-    let parsedValue = value;
-    if (typeof value === 'string') {
-      const parsed = new DOMParser().parseFromString(value, 'text/html');
-      const element = parsed.body.firstChild as HTMLElement;
-      if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
-        const data = element.getAttribute('data');
-        if (data) {
-          try {
-            parsedValue = JSON.parse(data);
-            isAnchor = true;
-          } catch (error) {
-            parsedValue = value;
-          }
-        }
-      }
+  /**
+   * Retrieves and parses the info type value for a specific row
+   * @param rowId - The row ID to get info from
+   * @returns Object containing parsed value and whether it's from an anchor tag
+   */
+  const getInfoTypeValueForRow = (
+    rowId: number,
+  ): { parsedValue: DataRecordValue | null; isAnchor: boolean } => {
+    // If no info type column is set or row doesn't exist, return null
+    if (!cellNameWithInfoType || !data[rowId]) {
+      return { parsedValue: null, isAnchor: false };
     }
-    return { parsedValue, isAnchor };
+
+    // Get the value from the identified info column
+    const value = data[rowId][cellNameWithInfoType];
+
+    // Use the existing parseCellValue function to avoid duplicating parsing logic
+    return parseCellValue(value);
   };
 
-  const createShowParamsRegex = (pattern: string): RegExp =>
+  /**
+   * Creates a regular expression to match data-info-type attributes
+   * @param pattern - The pattern to match within the attribute value
+   * @returns A regular expression that matches the pattern
+   */
+  const createDataInfoTypeRegex = (pattern: string): RegExp =>
     new RegExp(`data-info-type\\s*=\\s*["']${pattern}["']`, 'i');
 
+  /**
+   * Checks if an HTML string contains a data-info-type attribute
+   * @param htmlString - The HTML string to check
+   * @param pattern - The pattern to look for in the attribute value (defaults to 'show_params')
+   * @returns Boolean indicating whether the attribute is present
+   */
   const containsDataInfoAttribute = (
     htmlString: string,
     pattern = 'show_params',
   ): boolean => {
-    const showParamsRegex = createShowParamsRegex(pattern);
-    return showParamsRegex.test(htmlString);
+    // Skip checking if input is not a string
+    if (typeof htmlString !== 'string') {
+      return false;
+    }
+
+    const dataInfoTypeRegex = createDataInfoTypeRegex(pattern);
+    return dataInfoTypeRegex.test(htmlString);
   };
 
   const getColumnNameWithDataInfoAttribute = useCallback(
-    data =>
-      Object.keys(data[0]).find(key => containsDataInfoAttribute(data[0][key])),
+    (tableData: D[]) =>
+      // Return the key of the first column that contains the data-info-type attribute
+      Object.keys(tableData[0]).find(columnKey =>
+        containsDataInfoAttribute(tableData[0][columnKey] as string),
+      ),
     [containsDataInfoAttribute],
   );
 
+  // Find and store the column with data-info-type attribute whenever data changes
   useEffect(() => {
-    const columnNameWithDataInfoAttribute =
-      getColumnNameWithDataInfoAttribute(data);
+    if (!data || data.length === 0) {
+      return;
+    }
 
-    filteredColumnsMeta.filter(c => {
-      if (c.key !== columnNameWithDataInfoAttribute) {
-        setHasDataInfoTypeInRow(columnNameWithDataInfoAttribute);
-        return true;
-      }
-    });
-  }, [data]);
+    const infoTypeColumn = getColumnNameWithDataInfoAttribute(data);
+    setHasDataInfoTypeInRow(infoTypeColumn);
+  }, [data, getColumnNameWithDataInfoAttribute]);
 
   // only take relevant page size options
   const pageSizeOptions = useMemo(() => {
@@ -830,13 +859,13 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         row: Row<D>,
         value: DataRecordValue,
       ) => {
-        const { parsedValue, isAnchor } = getCellParsms(value);
+        const { parsedValue, isAnchor } = parseCellValue(value);
 
-        const isShowCellParams = createShowParamsRegex('*');
+        const isShowCellParams = createDataInfoTypeRegex('*');
         if (!isAnchor && !isShowCellParams.test(parsedValue as string)) {
           let canProcess = true;
-          const { parsedValue: cellParsedValue } = getrowparamsinfotypevalue(
-            row.id,
+          const { parsedValue: cellParsedValue } = getInfoTypeValueForRow(
+            Number(row.id),
           );
 
           if (cellParsedValue) {
@@ -1178,11 +1207,11 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     const columnNameWithDataInfoAttribute =
       getColumnNameWithDataInfoAttribute(data);
     return filteredColumnsMeta
-      .filter(c => {
-        if (c.key !== columnNameWithDataInfoAttribute) {
-          return true;
-        }
-      })
+      .filter(
+        c =>
+          // Return true for all columns except the one with data-info-type attribute
+          c.key !== columnNameWithDataInfoAttribute,
+      )
       .map(getColumnConfigs);
   }, [
     filteredColumnsMeta,
