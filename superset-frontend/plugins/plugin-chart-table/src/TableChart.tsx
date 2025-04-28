@@ -676,6 +676,18 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     [filteredColumnsMeta, isUsingTimeComparison],
   );
 
+  const createShowParamsRegex = (pattern: string): RegExp => {
+    return new RegExp(`data-info-type\\s*=\\s*["']${pattern}["']`, 'i');
+  };
+
+  const containsDataInfoAttribute = (
+    htmlString: string,
+    pattern: string = 'show_params',
+  ): boolean => {
+    const showParamsRegex = createShowParamsRegex(pattern);
+    return showParamsRegex.test(htmlString);
+  };
+
   const getColumnConfigs = useCallback(
     (column: DataColumnMeta, i: number): ColumnWithLooseAccessor<D> => {
       const {
@@ -724,7 +736,9 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         (isMetric || isRawRecords || isPercentMetric) &&
         getValueRange(key, alignPositiveNegative);
 
-      let className = '';
+      const hasDataInfoTypeInRow = !!getColumnNameWithDataInfoAttribute(data);
+
+      let className = hasDataInfoTypeInRow ? 'dt-has-data-info' : '';
       if (emitCrossFilters && !isMetric) {
         className += ' dt-is-filter';
       }
@@ -745,11 +759,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         }
       }
 
-      const cellClicked = (
-        column: DataColumnMeta,
-        row: Row<D>,
-        value: DataRecordValue,
-      ) => {
+      const getCellParsms = (value: DataRecordValue) => {
         let isAnchor = false;
         let parsedValue = value;
         if (typeof value === 'string') {
@@ -770,13 +780,50 @@ export default function TableChart<D extends DataRecord = DataRecord>(
             }
           }
         }
+        return { parsedValue, isAnchor };
+      };
+
+      const cellClicked = (
+        column: DataColumnMeta,
+        row: Row<D>,
+        value: DataRecordValue,
+      ) => {
+        const { parsedValue, isAnchor } = getCellParsms(value);
+
+        const isShowCellParams = createShowParamsRegex('*');
+
+        if (!isAnchor && !isShowCellParams.test(parsedValue as string)) {
+          let canProcess = true;
+          row.allCells.forEach((cell: any) => {
+            const { parsedValue: cellParsedValue } = getCellParsms(cell.value);
+            const isShowParams = containsDataInfoAttribute(
+              cellParsedValue as string,
+            );
+
+            if (isShowParams) {
+              const msg: CellClicked = {
+                columnKey: column.key,
+                rowIndex: row.index,
+                cellData: cellParsedValue,
+                isAnchor: false,
+              };
+
+              // SingletonSwitchboard.emit('CellClicked', msg);
+              canProcess = false;
+            }
+          });
+          if (!canProcess) {
+            return;
+          }
+        }
         const msg: CellClicked = {
           columnKey: column.key,
           rowIndex: row.index,
           cellData: parsedValue,
           isAnchor,
         };
-        SingletonSwitchboard.emit('CellClicked', msg);
+
+        // SingletonSwitchboard.emit('CellClicked', msg);
       };
 
       return {
@@ -1089,11 +1136,30 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     ],
   );
 
-  const columns = useMemo(
-    () => filteredColumnsMeta.map(getColumnConfigs),
-    [filteredColumnsMeta, getColumnConfigs],
+  const getColumnNameWithDataInfoAttribute = useCallback(
+    data => {
+      return Object.keys(data[0]).find(key =>
+        containsDataInfoAttribute(data[0][key]),
+      );
+    },
+    [containsDataInfoAttribute],
   );
 
+  const columns = useMemo(() => {
+    const columnNameWithDataInfoAttribute =
+      getColumnNameWithDataInfoAttribute(data);
+    return filteredColumnsMeta
+      .filter(c => c.key !== columnNameWithDataInfoAttribute)
+      .map(getColumnConfigs);
+  }, [
+    filteredColumnsMeta,
+    getColumnConfigs,
+    data,
+    getColumnNameWithDataInfoAttribute,
+    containsDataInfoAttribute,
+  ]);
+
+  console.log('columns', filteredColumnsMeta);
   const handleServerPaginationChange = useCallback(
     (pageNumber: number, pageSize: number) => {
       updateExternalFormData(setDataMask, pageNumber, pageSize);

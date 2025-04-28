@@ -67,6 +67,9 @@ export default styled.div`
     .dt-is-null {
       color: ${theme.colors.grayscale.light1};
     }
+    .dt-has-data-info {
+      cursor: pointer;
+    }
     td.dt-is-filter {
       cursor: pointer;
     }
