@@ -676,13 +676,12 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     [filteredColumnsMeta, isUsingTimeComparison],
   );
 
-  const createShowParamsRegex = (pattern: string): RegExp => {
-    return new RegExp(`data-info-type\\s*=\\s*["']${pattern}["']`, 'i');
-  };
+  const createShowParamsRegex = (pattern: string): RegExp =>
+    new RegExp(`data-info-type\\s*=\\s*["']${pattern}["']`, 'i');
 
   const containsDataInfoAttribute = (
     htmlString: string,
-    pattern: string = 'show_params',
+    pattern = 'show_params',
   ): boolean => {
     const showParamsRegex = createShowParamsRegex(pattern);
     return showParamsRegex.test(htmlString);
@@ -1137,11 +1136,8 @@ export default function TableChart<D extends DataRecord = DataRecord>(
   );
 
   const getColumnNameWithDataInfoAttribute = useCallback(
-    data => {
-      return Object.keys(data[0]).find(key =>
-        containsDataInfoAttribute(data[0][key]),
-      );
-    },
+    data =>
+      Object.keys(data[0]).find(key => containsDataInfoAttribute(data[0][key])),
     [containsDataInfoAttribute],
   );
 
@@ -1159,7 +1155,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     containsDataInfoAttribute,
   ]);
 
-  console.log('columns', filteredColumnsMeta);
   const handleServerPaginationChange = useCallback(
     (pageNumber: number, pageSize: number) => {
       updateExternalFormData(setDataMask, pageNumber, pageSize);
