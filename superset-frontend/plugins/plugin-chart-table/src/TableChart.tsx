@@ -24,6 +24,7 @@ import {
   useState,
   MouseEvent,
   KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
 } from 'react';
 
 import {
@@ -289,6 +290,85 @@ export default function TableChart<D extends DataRecord = DataRecord>(
   ]);
   const [hideComparisonKeys, setHideComparisonKeys] = useState<string[]>([]);
   const theme = useTheme();
+
+  const getCellParsms = (value: DataRecordValue) => {
+    let isAnchor = false;
+    let parsedValue = value;
+    if (typeof value === 'string') {
+      const parsed = new DOMParser().parseFromString(value, 'text/html');
+      const element = parsed.body.firstChild as HTMLElement;
+      if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
+        const data = element.getAttribute('data');
+        if (data) {
+          try {
+            parsedValue = JSON.parse(data);
+            isAnchor = true;
+          } catch (error) {
+            parsedValue = value;
+          }
+        }
+      }
+    }
+
+    return { parsedValue, isAnchor };
+  };
+
+  const [cellNameWithInfoType, setHasDataInfoTypeInRow] = useState<
+    string | null
+  >(null);
+
+  const getrowparamsinfotypevalue = rowId => {
+    let isAnchor = false;
+
+    const value = cellNameWithInfoType && data[rowId][cellNameWithInfoType];
+
+    let parsedValue = value;
+    if (typeof value === 'string') {
+      const parsed = new DOMParser().parseFromString(value, 'text/html');
+      const element = parsed.body.firstChild as HTMLElement;
+      if (element?.tagName === 'A' && element.getAttribute('href') === '#') {
+        const data = element.getAttribute('data');
+        if (data) {
+          try {
+            parsedValue = JSON.parse(data);
+            isAnchor = true;
+          } catch (error) {
+            parsedValue = value;
+          }
+        }
+      }
+    }
+    return { parsedValue, isAnchor };
+  };
+
+  const createShowParamsRegex = (pattern: string): RegExp =>
+    new RegExp(`data-info-type\\s*=\\s*["']${pattern}["']`, 'i');
+
+  const containsDataInfoAttribute = (
+    htmlString: string,
+    pattern = 'show_params',
+  ): boolean => {
+    const showParamsRegex = createShowParamsRegex(pattern);
+    return showParamsRegex.test(htmlString);
+  };
+
+  const getColumnNameWithDataInfoAttribute = useCallback(
+    data =>
+      Object.keys(data[0]).find(key => containsDataInfoAttribute(data[0][key])),
+    [containsDataInfoAttribute],
+  );
+
+  useEffect(() => {
+    const columnNameWithDataInfoAttribute =
+      getColumnNameWithDataInfoAttribute(data);
+
+    filteredColumnsMeta.filter(c => {
+      if (c.key !== columnNameWithDataInfoAttribute) {
+        setHasDataInfoTypeInRow(columnNameWithDataInfoAttribute);
+        return true;
+      }
+    });
+  }, [data]);
 
   // only take relevant page size options
   const pageSizeOptions = useMemo(() => {
@@ -676,17 +756,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     [filteredColumnsMeta, isUsingTimeComparison],
   );
 
-  const createShowParamsRegex = (pattern: string): RegExp =>
-    new RegExp(`data-info-type\\s*=\\s*["']${pattern}["']`, 'i');
-
-  const containsDataInfoAttribute = (
-    htmlString: string,
-    pattern = 'show_params',
-  ): boolean => {
-    const showParamsRegex = createShowParamsRegex(pattern);
-    return showParamsRegex.test(htmlString);
-  };
-
   const getColumnConfigs = useCallback(
     (column: DataColumnMeta, i: number): ColumnWithLooseAccessor<D> => {
       const {
@@ -735,9 +804,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         (isMetric || isRawRecords || isPercentMetric) &&
         getValueRange(key, alignPositiveNegative);
 
-      const hasDataInfoTypeInRow = !!getColumnNameWithDataInfoAttribute(data);
-
-      let className = hasDataInfoTypeInRow ? 'dt-has-data-info' : '';
+      let className = cellNameWithInfoType ? 'dt-has-data-info' : '';
       if (emitCrossFilters && !isMetric) {
         className += ' dt-is-filter';
       }
@@ -758,30 +825,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         }
       }
 
-      const getCellParsms = (value: DataRecordValue) => {
-        let isAnchor = false;
-        let parsedValue = value;
-        if (typeof value === 'string') {
-          const parsed = new DOMParser().parseFromString(value, 'text/html');
-          const element = parsed.body.firstChild as HTMLElement;
-          if (
-            element?.tagName === 'A' &&
-            element.getAttribute('href') === '#'
-          ) {
-            const data = element.getAttribute('data');
-            if (data) {
-              try {
-                parsedValue = JSON.parse(data);
-                isAnchor = true;
-              } catch (error) {
-                parsedValue = value;
-              }
-            }
-          }
-        }
-        return { parsedValue, isAnchor };
-      };
-
       const cellClicked = (
         column: DataColumnMeta,
         row: Row<D>,
@@ -790,27 +833,23 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         const { parsedValue, isAnchor } = getCellParsms(value);
 
         const isShowCellParams = createShowParamsRegex('*');
-
         if (!isAnchor && !isShowCellParams.test(parsedValue as string)) {
           let canProcess = true;
-          row.allCells.forEach((cell: any) => {
-            const { parsedValue: cellParsedValue } = getCellParsms(cell.value);
-            const isShowParams = containsDataInfoAttribute(
-              cellParsedValue as string,
-            );
+          const { parsedValue: cellParsedValue } = getrowparamsinfotypevalue(
+            row.id,
+          );
 
-            if (isShowParams) {
-              const msg: CellClicked = {
-                columnKey: column.key,
-                rowIndex: row.index,
-                cellData: cellParsedValue,
-                isAnchor: false,
-              };
+          if (cellParsedValue) {
+            const msg: CellClicked = {
+              columnKey: column.key,
+              rowIndex: row.index,
+              cellData: cellParsedValue,
+              isAnchor: false,
+            };
 
-              SingletonSwitchboard.emit('CellClicked', msg);
-              canProcess = false;
-            }
-          });
+            SingletonSwitchboard.emit('CellClicked', msg);
+            canProcess = false;
+          }
           if (!canProcess) {
             return;
           }
@@ -1135,17 +1174,15 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     ],
   );
 
-  const getColumnNameWithDataInfoAttribute = useCallback(
-    data =>
-      Object.keys(data[0]).find(key => containsDataInfoAttribute(data[0][key])),
-    [containsDataInfoAttribute],
-  );
-
   const columns = useMemo(() => {
     const columnNameWithDataInfoAttribute =
       getColumnNameWithDataInfoAttribute(data);
     return filteredColumnsMeta
-      .filter(c => c.key !== columnNameWithDataInfoAttribute)
+      .filter(c => {
+        if (c.key !== columnNameWithDataInfoAttribute) {
+          return true;
+        }
+      })
       .map(getColumnConfigs);
   }, [
     filteredColumnsMeta,
