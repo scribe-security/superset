@@ -807,7 +807,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 isAnchor: false,
               };
 
-              // SingletonSwitchboard.emit('CellClicked', msg);
+              SingletonSwitchboard.emit('CellClicked', msg);
               canProcess = false;
             }
           });
@@ -822,7 +822,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           isAnchor,
         };
 
-        // SingletonSwitchboard.emit('CellClicked', msg);
+        SingletonSwitchboard.emit('CellClicked', msg);
       };
 
       return {
