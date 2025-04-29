@@ -346,11 +346,12 @@ export default function TableChart<D extends DataRecord = DataRecord>(
       return { parsedValue: null, isAnchor: false };
     }
 
+    console.log('getInfoTypeValueForRow', rowId, cellNameWithInfoType);
     // Get the value from the identified info column
     const value = data[rowId][cellNameWithInfoType];
-
+    console.log('getInfoTypeValueForRow', value);
     // Use the existing parseCellValue function to avoid duplicating parsing logic
-    return parseCellValue(value);
+    return { parsedValue: value;, isAnchor: false };
   };
 
   /**
@@ -864,9 +865,8 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         const isShowCellParams = createDataInfoTypeRegex('*');
         if (!isAnchor && !isShowCellParams.test(parsedValue as string)) {
           let canProcess = true;
-          const { parsedValue: cellParsedValue } = getInfoTypeValueForRow(
-            Number(row.id),
-          );
+          const { parsedValue: cellParsedValue, isAnchor } =
+            getInfoTypeValueForRow(Number(row.id));
 
           if (cellParsedValue) {
             const msg: CellClicked = {
@@ -876,6 +876,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
               isAnchor: false,
             };
 
+            console.log('cellClicked', msg);
             SingletonSwitchboard.emit('CellClicked', msg);
             canProcess = false;
           }
@@ -890,6 +891,7 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           isAnchor,
         };
 
+        console.log('cellClicked', msg);
         SingletonSwitchboard.emit('CellClicked', msg);
       };
 
@@ -1206,13 +1208,15 @@ export default function TableChart<D extends DataRecord = DataRecord>(
   const columns = useMemo(() => {
     const columnNameWithDataInfoAttribute =
       getColumnNameWithDataInfoAttribute(data);
-    return filteredColumnsMeta
-      .filter(
-        c =>
-          // Return true for all columns except the one with data-info-type attribute
-          c.key !== columnNameWithDataInfoAttribute,
-      )
-      .map(getColumnConfigs);
+    return (
+      filteredColumnsMeta
+        // .filter(
+        //   c =>
+        //     // Return true for all columns except the one with data-info-type attribute
+        //     c.key !== columnNameWithDataInfoAttribute,
+        // )
+        .map(getColumnConfigs)
+    );
   }, [
     filteredColumnsMeta,
     getColumnConfigs,
