@@ -346,12 +346,10 @@ export default function TableChart<D extends DataRecord = DataRecord>(
       return { parsedValue: null, isAnchor: false };
     }
 
-    console.log('getInfoTypeValueForRow', rowId, cellNameWithInfoType);
     // Get the value from the identified info column
     const value = data[rowId][cellNameWithInfoType];
-    console.log('getInfoTypeValueForRow', value);
     // Use the existing parseCellValue function to avoid duplicating parsing logic
-    return { parsedValue: value;, isAnchor: false };
+    return { parsedValue: value, isAnchor: false };
   };
 
   /**
@@ -876,7 +874,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
               isAnchor: false,
             };
 
-            console.log('cellClicked', msg);
             SingletonSwitchboard.emit('CellClicked', msg);
             canProcess = false;
           }
@@ -891,7 +888,6 @@ export default function TableChart<D extends DataRecord = DataRecord>(
           isAnchor,
         };
 
-        console.log('cellClicked', msg);
         SingletonSwitchboard.emit('CellClicked', msg);
       };
 
