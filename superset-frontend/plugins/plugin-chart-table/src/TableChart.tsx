@@ -863,8 +863,9 @@ export default function TableChart<D extends DataRecord = DataRecord>(
         const isShowCellParams = createDataInfoTypeRegex('*');
         if (!isAnchor && !isShowCellParams.test(parsedValue as string)) {
           let canProcess = true;
-          const { parsedValue: cellParsedValue, isAnchor } =
-            getInfoTypeValueForRow(Number(row.id));
+          const { parsedValue: cellParsedValue } = getInfoTypeValueForRow(
+            Number(row.id),
+          );
 
           if (cellParsedValue) {
             const msg: CellClicked = {
