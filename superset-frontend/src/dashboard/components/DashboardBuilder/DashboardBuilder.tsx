@@ -30,7 +30,7 @@ import {
   useTheme,
   useElementOnScreen,
 } from '@superset-ui/core';
-import { Global } from '@emotion/react';
+// import { Global } from '@emotion/react';
 import { useDispatch, useSelector } from 'react-redux';
 import ErrorBoundary from 'src/components/ErrorBoundary';
 import BuilderComponentPane from 'src/dashboard/components/BuilderComponentPane';
@@ -396,6 +396,28 @@ const DashboardBuilder: FC<DashboardBuilderProps> = () => {
   const crossFiltersEnabled = isFeatureEnabled(
     FeatureFlag.DashboardCrossFilters,
   );
+
+  // Handle fullscreen popover styling with DOM manipulation
+  // instead of using Emotion's Global component to avoid DOM-related errors
+  useEffect(() => {
+    const styleId = 'fullscreen-popover-style';
+
+    // Add style element if in fullscreen mode
+    if (fullSizeChartId) {
+      const styleEl = document.createElement('style');
+      styleEl.textContent = `div > .filterStatusPopover.ant-popover { z-index: 101 }`;
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    // Cleanup function to remove style element
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, [fullSizeChartId]);
   const filterBarOrientation = useSelector<RootState, FilterBarOrientation>(
     ({ dashboardInfo }) =>
       isFeatureEnabled(FeatureFlag.HorizontalFilterBar)
@@ -643,13 +665,6 @@ const DashboardBuilder: FC<DashboardBuilderProps> = () => {
         </Droppable>
       </StyledHeader>
       <StyledContent fullSizeChartId={fullSizeChartId}>
-        <Global
-          styles={css`
-            // @z-index-above-dashboard-header (100) + 1 = 101
-            ${fullSizeChartId &&
-            `div > .filterStatusPopover.ant-popover{z-index: 101}`}
-          `}
-        />
         {!editMode &&
           !topLevelTabs &&
           dashboardLayout[DASHBOARD_GRID_ID]?.children?.length === 0 && (
