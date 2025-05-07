@@ -1202,23 +1202,13 @@ export default function TableChart<D extends DataRecord = DataRecord>(
     ],
   );
 
-  const columns = useMemo(() => {
-    const columnNameWithDataInfoAttribute =
-      getColumnNameWithDataInfoAttribute(data);
-    return filteredColumnsMeta
-      .filter(
-        c =>
-          // Return true for all columns except the one with data-info-type attribute
-          c.key !== columnNameWithDataInfoAttribute,
-      )
-      .map(getColumnConfigs);
-  }, [
-    filteredColumnsMeta,
-    getColumnConfigs,
-    data,
-    getColumnNameWithDataInfoAttribute,
-    containsDataInfoAttribute,
-  ]);
+  const columns = useMemo(
+    () =>
+      filteredColumnsMeta
+        // Return true for all columns except the one with data-info-type attribute
+        .map(getColumnConfigs),
+    [filteredColumnsMeta, getColumnConfigs, data, containsDataInfoAttribute],
+  );
 
   const handleServerPaginationChange = useCallback(
     (pageNumber: number, pageSize: number) => {
