@@ -56,13 +56,14 @@ export const buildTree = (
       }
 
       let edgeColor: string = RGBAToHexA(DEFAULT_EDGE_COLOR);
-      if (log.edgeColorCol) {
+      if (log.colorCol) {
         edgeColor =
-          edgeColors[log.edgeColorCol?.toLowerCase()] ||
+          edgeColors[log.colorCol?.toLowerCase()] ||
           edgeColors['*'] ||
           edgeColor;
       }
 
+ 
       // const nodesParent = nodes.find((v) => v.id === parentId);
       const existingNode = tree.find(v => v.id === id);
       let treeNode: NodeTreeType;
