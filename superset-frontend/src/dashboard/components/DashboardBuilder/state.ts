@@ -20,11 +20,34 @@ import { useSelector } from 'react-redux';
 import { useCallback, useEffect, useState } from 'react';
 import { URL_PARAMS } from 'src/constants';
 import { getUrlParam } from 'src/utils/urlUtils';
-import { RootState } from 'src/dashboard/types';
+import type { RootState } from 'src/dashboard/types';
 import {
   useFilters,
   useNativeFiltersDataMask,
 } from '../nativeFilters/FilterBar/state';
+
+/**
+ * Determines if a filter has active values that should be displayed
+ */
+export const hasFilterValues = (filterState: any): boolean => {
+  if (!filterState) return false;
+
+  // Check if extraFormData has filters
+  if (filterState.extraFormData?.filters?.length > 0) {
+    return true;
+  }
+
+  // Check if filterState has a value that's not undefined/null
+  if (filterState?.filterState?.value) {
+    // For array values, check if they're non-empty
+    if (Array.isArray(filterState.filterState.value)) {
+      return filterState.filterState.value.length > 0;
+    }
+    return true;
+  }
+
+  return false;
+};
 
 // eslint-disable-next-line import/prefer-default-export
 export const useNativeFilters = () => {
@@ -48,6 +71,10 @@ export const useNativeFilters = () => {
   );
   const dataMask = useNativeFiltersDataMask();
 
+  const hasFiltersToDisplay: boolean = Object.keys(dataMask).some(filterId =>
+    hasFilterValues(dataMask[filterId]),
+  );
+
   const missingInitialFilters = requiredFirstFilter
     .filter(({ id }) => dataMask[id]?.filterState?.value === undefined)
     .map(({ name }) => name);
@@ -65,7 +92,8 @@ export const useNativeFilters = () => {
   useEffect(() => {
     if (
       expandFilters === false ||
-      (filterValues.length === 0 && nativeFiltersEnabled)
+      (filterValues.length === 0 && nativeFiltersEnabled) ||
+      !hasFiltersToDisplay
     ) {
       toggleDashboardFiltersOpen(false);
     } else {
