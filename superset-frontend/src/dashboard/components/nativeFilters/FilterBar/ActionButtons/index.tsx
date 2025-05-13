@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   css,
   DataMaskState,
@@ -29,6 +29,7 @@ import Button from 'src/components/Button';
 import { OPEN_FILTER_BAR_WIDTH } from 'src/dashboard/constants';
 import { rgba } from 'emotion-rgba';
 import { FilterBarOrientation } from 'src/dashboard/types';
+import SingletonSwitchboard from '@superset-ui/switchboard';
 import { getFilterBarTestId } from '../utils';
 
 interface ActionButtonsProps {
@@ -120,6 +121,13 @@ const ActionButtons = ({
     [dataMaskApplied, dataMaskSelected],
   );
   const isVertical = filterBarOrientation === FilterBarOrientation.Vertical;
+
+  useEffect(() => {
+    SingletonSwitchboard?.emit('filterDataMaskChanged', {
+      dataMaskApplied,
+      dataMaskSelected,
+    });
+  }, [dataMaskApplied, dataMaskSelected]);
 
   return (
     <div
