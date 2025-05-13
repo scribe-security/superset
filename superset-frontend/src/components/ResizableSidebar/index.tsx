@@ -24,6 +24,7 @@ import useStoredSidebarWidth from './useStoredSidebarWidth';
 const ResizableWrapper = styled.div`
   position: absolute;
   height: 100%;
+  transition: width 0.3s ease-in-out; /* Add transition for width animation */
 
   :hover .sidebar-resizer::after {
     background-color: ${({ theme }) => theme.colors.primary.base};

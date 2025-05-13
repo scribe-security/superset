@@ -43,6 +43,7 @@ import CrossFiltersVertical from './CrossFilters/Vertical';
 
 const BarWrapper = styled.div<{ width: number }>`
   width: ${({ theme }) => theme.gridUnit * 8}px;
+  transition: width 0.3s ease-in-out; /* Add transition for width animation */
 
   & .ant-tabs-top > .ant-tabs-nav {
     margin: 0;

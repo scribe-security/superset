@@ -90,6 +90,7 @@ const FiltersPanel = styled.div<{ width: number; hidden: boolean }>`
   grid-row: 1 / span 2;
   z-index: 11;
   width: ${({ width }) => width}px;
+  transition: width 0.3s ease-in-out; /* Add transition for width animation */
   ${({ hidden }) => hidden && `display: none;`}
 `;
 
@@ -98,6 +99,7 @@ const StickyPanel = styled.div<{ width: number }>`
   top: -1px;
   width: ${({ width }) => width}px;
   flex: 0 0 ${({ width }) => width}px;
+  transition: width 0.3s ease-in-out; /* Add transition for width animation */
 `;
 
 // @z-index-above-dashboard-popovers (99) + 1 = 100
@@ -289,6 +291,7 @@ const StyledDashboardContent = styled.div<{
     flex-wrap: nowrap;
     height: auto;
     flex: 1;
+    transition: margin-left 0.3s ease-in-out; /* Add transition for smooth content shift */
 
     .grid-container .dashboard-component-tabs {
       box-shadow: none;
@@ -304,6 +307,7 @@ const StyledDashboardContent = styled.div<{
       margin-right: ${theme.gridUnit * 8}px;
       margin-bottom: ${theme.gridUnit * 6}px;
       margin-left: ${marginLeft}px;
+      transition: margin-left 0.3s ease-in-out; /* Add transition for smooth margin changes */
 
       ${editMode &&
       `
