@@ -19,6 +19,7 @@
 import getBootstrapData from 'src/utils/getBootstrapData';
 import { store } from '../views/store';
 import { getDashboardPermalink as getDashboardPermalinkUtil } from '../utils/urlUtils';
+import { setApplyButtonDisabled } from '../dashboard/actions/dashboardState';
 
 const bootstrapData = getBootstrapData();
 
@@ -28,6 +29,7 @@ type Size = {
 };
 
 type EmbeddedSupersetApi = {
+  setAcionButton: (val: boolean) => void;
   getScrollSize: () => Size;
   getDashboardPermalink: ({ anchor }: { anchor: string }) => Promise<string>;
   getActiveTabs: () => string[];
@@ -142,10 +144,16 @@ const getActiveTabs = () => store?.getState()?.dashboardState?.activeTabs || [];
 
 const getDashboardState = () => store?.getState()?.dashboardState || [];
 
+const setAcionButton = (val: boolean) => {
+  // Dispatch the action to the store
+  store.dispatch(setApplyButtonDisabled(val));
+};
+
 export const embeddedApi: EmbeddedSupersetApi = {
   getScrollSize,
   getDashboardPermalink,
   getActiveTabs,
   getDashboardState,
   setActiveTabByName,
+  setAcionButton,
 };

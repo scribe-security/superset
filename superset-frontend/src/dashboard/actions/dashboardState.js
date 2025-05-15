@@ -719,6 +719,14 @@ export function setDatasetsStatus(status) {
   };
 }
 
+export const SET_APPLY_BUTTON_DISABLED = 'SET_APPLY_BUTTON_DISABLED';
+export function setApplyButtonDisabled(isDisabled) {
+  return {
+    type: SET_APPLY_BUTTON_DISABLED,
+    isDisabled,
+  };
+}
+
 const storeDashboardMetadata = async (id, metadata) =>
   SupersetClient.put({
     endpoint: `/api/v1/dashboard/${id}`,

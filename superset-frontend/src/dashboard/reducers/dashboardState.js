@@ -50,6 +50,7 @@ import {
   SET_DASHBOARD_LABELS_COLORMAP_SYNCED,
   SET_DASHBOARD_SHARED_LABELS_COLORS_SYNCABLE,
   SET_DASHBOARD_SHARED_LABELS_COLORS_SYNCED,
+  SET_APPLY_BUTTON_DISABLED,
 } from '../actions/dashboardState';
 import { HYDRATE_DASHBOARD } from '../actions/hydrate';
 
@@ -264,6 +265,12 @@ export default function dashboardStateReducer(state = {}, action) {
       return {
         ...state,
         datasetsStatus: action.status,
+      };
+    },
+    [SET_APPLY_BUTTON_DISABLED]() {
+      return {
+        ...state,
+        isApplyButtonDisabled: action.isDisabled,
       };
     },
   };

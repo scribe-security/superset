@@ -272,11 +272,17 @@ const FilterBar: FC<FiltersBarProps> = ({
   }, [dataMaskSelected, dispatch, filtersInScope, setDataMaskSelected]);
 
   useFilterUpdates(dataMaskSelected, setDataMaskSelected);
-  const isApplyDisabled = checkIsApplyDisabled(
+  const defaultIsApplyDisabled = checkIsApplyDisabled(
     dataMaskSelected,
     dataMaskApplied,
     filtersInScope.filter(isNativeFilter),
   );
+  // Get custom disabled state from Redux
+  const customIsApplyDisabled = useSelector<RootState, boolean>(
+    state => state.dashboardState.isApplyButtonDisabled === true,
+  );
+  // Combine both states - button is disabled if either condition is true
+  const isApplyDisabled = defaultIsApplyDisabled || customIsApplyDisabled;
   const isInitialized = useInitialization();
 
   const actions = (

@@ -88,6 +88,7 @@ export type ActiveTabs = string[];
 export type DashboardLayout = { [key: string]: LayoutItem };
 export type DashboardLayoutState = { present: DashboardLayout };
 export type DashboardState = {
+  isApplyButtonDisabled?: boolean;
   preselectNativeFilters?: JsonObject;
   editMode: boolean;
   isPublished: boolean;
