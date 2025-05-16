@@ -217,6 +217,7 @@ window.addEventListener('message', function embeddedPageInitializer(event) {
       'setActiveTabByName',
       embeddedApi.setActiveTabByName,
     );
+    Switchboard.defineMethod('setAcionButton', embeddedApi.setAcionButton);
     Switchboard.start();
   }
 });
