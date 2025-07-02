@@ -1009,7 +1009,8 @@ export default function TableChart<D extends DataRecord = DataRecord>(
                 !isMetric &&
                 !getSelectedText()
               ) {
-                toggleFilter(key, value);
+                // toggle filter on click is disabled
+                // toggleFilter(key, value);
               }
             },
             onContextMenu: (e: MouseEvent) => {
