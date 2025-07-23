@@ -156,7 +156,7 @@ export const useExploreAdditionalActionsMenu = (
             resultFormat: 'csv',
           })
         : null,
-    [canDownloadCSV, latestQueryFormData],
+    [canDownloadCSV, latestQueryFormData, ownState],
   );
 
   const exportCSVPivoted = useCallback(
@@ -215,14 +215,16 @@ export const useExploreAdditionalActionsMenu = (
           setIsDropdownVisible(false);
           break;
         case MENU_KEYS.EXPORT_TO_CSV:
-          exportCSV();
-          setIsDropdownVisible(false);
-          dispatch(
-            logEvent(LOG_ACTIONS_CHART_DOWNLOAD_AS_CSV, {
-              chartId: slice?.slice_id,
-              chartName: slice?.slice_name,
-            }),
-          );
+          exportCSV().then(() => {
+            console.log('CSV export completed');
+            setIsDropdownVisible(false);
+            dispatch(
+              logEvent(LOG_ACTIONS_CHART_DOWNLOAD_AS_CSV, {
+                chartId: slice?.slice_id,
+                chartName: slice?.slice_name,
+              }),
+            );
+          });
           break;
         case MENU_KEYS.EXPORT_TO_CSV_PIVOTED:
           exportCSVPivoted();
