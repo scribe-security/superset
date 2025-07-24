@@ -26,7 +26,6 @@ import {
   RefObject,
   useCallback,
   ReactElement,
-  useEffect,
 } from 'react';
 
 import { RouteComponentProps, useHistory, withRouter } from 'react-router-dom';
@@ -43,7 +42,6 @@ import {
   useTheme,
   ensureIsArray,
 } from '@superset-ui/core';
-import { installCSVCleaner } from 'src/utils/csvCleaner';
 import { useSelector } from 'react-redux';
 import {
   MenuItemKeyEnum,
@@ -540,11 +538,6 @@ const SliceHeaderControls = (props: SliceHeaderControlsPropsWithRouter) => {
   );
   const history = useHistory();
 
-  // Install CSV Cleaner
-  useEffect(() => {
-    installCSVCleaner();
-  }, []);
-
   const queryMenuRef: RefObject<any> = useRef(null);
   const menuRef: RefObject<any> = useRef(null);
   const copyLinkMenuRef: RefObject<any> = useRef(null);
@@ -616,11 +609,6 @@ const SliceHeaderControls = (props: SliceHeaderControlsPropsWithRouter) => {
         }
         break;
       case MenuKeys.ExportCsv:
-        console.log('🎯 Export CSV clicked!', {
-          sliceId: props.slice.slice_id,
-          sliceName: props.slice.slice_name,
-          hasExportFunction: !!props.exportCSV,
-        });
         // eslint-disable-next-line no-unused-expressions
         props.exportCSV?.(props.slice.slice_id);
         break;
