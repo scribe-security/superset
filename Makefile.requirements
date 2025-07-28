@@ -1,0 +1,20 @@
+# Makefile for managing requirements
+
+.PHONY: compile-requirements
+compile-requirements:
+	pip install pip-tools
+	pip-compile requirements/base.in -o requirements/base.txt
+	pip-compile requirements/development.in -o requirements/development.txt
+
+.PHONY: upgrade-requirements
+upgrade-requirements:
+	pip install pip-tools
+	pip-compile --upgrade requirements/base.in -o requirements/base.txt
+	pip-compile --upgrade requirements/development.in -o requirements/development.txt
+
+.PHONY: test-requirements
+test-requirements:
+	@echo "Testing base requirements..."
+	pip install -r requirements/base.txt
+	@echo "Testing development requirements..."
+	pip install -r requirements/development.txt
