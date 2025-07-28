@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,10 +14,11 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
--e file:.
-beautifulsoup4
-urllib3>=1.26.18
-werkzeug>=3.0.1
-numexpr>=2.9.0
-boto3>=1.34.24
+
+"""Excel and CSV processing utilities for Superset."""
+
+from .html_parser import HtmlParser
+from .json_expander import JsonExpander
+from .post_processor import PostProcessor
+
+__all__ = ["HtmlParser", "JsonExpander", "PostProcessor"]

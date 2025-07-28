@@ -854,6 +854,19 @@ CSV_EXPORT = {"encoding": "utf-8"}
 # note: index option should not be overridden
 EXCEL_EXPORT: dict[str, Any] = {}
 
+# Excel/CSV Post-Processing Configuration
+# Enable post-processing for Excel and CSV exports
+EXCEL_PROCESSING_ENABLED = True
+
+# Enable HTML parsing in table cells (requires beautifulsoup4)
+EXCEL_PROCESSING_ENABLE_HTML_PARSING = True
+
+# Depth for JSON expansion (0 = no expansion, 1 = first level only, etc.)
+EXCEL_PROCESSING_JSON_EXPANSION_DEPTH = 1
+
+# Performance optimization: only process columns that contain HTML
+EXCEL_PROCESSING_ONLY_HTML_COLUMNS = True
+
 # ---------------------------------------------------
 # Time grain configurations
 # ---------------------------------------------------

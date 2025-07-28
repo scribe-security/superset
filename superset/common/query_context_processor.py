@@ -652,6 +652,22 @@ class QueryContextProcessor:
             if verbose_map:
                 df.columns = [verbose_map.get(column, column) for column in columns]
 
+            # Apply Excel/CSV post-processing if enabled
+            if config.get("EXCEL_PROCESSING_ENABLED", True):
+                try:
+                    from superset.utils.excel_processing import PostProcessor
+                    processor = PostProcessor.from_config(config)
+                    df = processor.process_dataframe(df)
+                except ImportError as e:
+                    logger.warning(
+                        "Excel/CSV post-processing module not available: %s", e
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Error during Excel/CSV post-processing: %s", e
+                    )
+                    # Continue without post-processing rather than failing export
+
             result = None
             if self._query_context.result_format == ChartDataResultFormat.CSV:
                 result = csv.df_to_escaped_csv(
