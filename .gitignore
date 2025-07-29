@@ -122,3 +122,27 @@ docker/*local*
 # Jest test report
 test-report.html
 .dev-tools/
+# Add these security-related entries to .gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Secrets files
+.act-secrets
+.github-act-secrets
+*secret*
+*password*
+*token*
+
+# Configuration files with secrets
+superset_config.py
+superset_config_*.py
+!superset_config_base.py
+!superset_config_prod.py
+!superset_config_dev.py
+
+# But allow example files
+!*.example
+!.env.example
