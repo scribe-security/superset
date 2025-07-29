@@ -37,6 +37,8 @@ class PostProcessor:
         enable_html_parsing: bool = True,
         json_expansion_depth: int = 1,
         process_only_html_columns: bool = True,
+        column_conflict_strategy: str = "increment",
+        exclude_column_prefixes: Optional[List[str]] = None,
     ) -> None:
         """
         Initialize the post-processor.
@@ -45,10 +47,17 @@ class PostProcessor:
             enable_html_parsing: Whether to enable HTML parsing
             json_expansion_depth: Depth for JSON expansion (0 = disabled)
             process_only_html_columns: Only process columns that contain HTML
+            column_conflict_strategy: How to handle column name conflicts
+                - "increment": Add number suffix (current behavior)
+                - "skip": Skip conflicting columns
+                - "merge": Reuse existing columns
+            exclude_column_prefixes: List of column prefixes to exclude from export
         """
         self.enable_html_parsing = enable_html_parsing
         self.json_expansion_depth = json_expansion_depth
         self.process_only_html_columns = process_only_html_columns
+        self.column_conflict_strategy = column_conflict_strategy
+        self.exclude_column_prefixes = exclude_column_prefixes or []
         
         self.html_parser = HtmlParser()
         self.json_expander = JsonExpander(max_depth=json_expansion_depth)
@@ -73,10 +82,28 @@ class PostProcessor:
             
             # Step 2: Expand JSON columns
             if self.json_expansion_depth > 0:
-                df = self._expand_json_columns(df)
+                if self.column_conflict_strategy == "merge":
+                    df = self._expand_json_columns_merge(df)
+                else:
+                    df = self._expand_json_columns(df)
             
             # Step 3: Remove duplicate columns
             df = df.loc[:, ~df.columns.duplicated()]
+            
+            # Step 4: Filter out columns with excluded prefixes
+            if self.exclude_column_prefixes:
+                columns_to_keep = []
+                for col in df.columns:
+                    should_exclude = False
+                    for prefix in self.exclude_column_prefixes:
+                        if col.startswith(prefix):
+                            should_exclude = True
+                            logger.debug(f"Excluding column '{col}' (starts with '{prefix}')")
+                            break
+                    if not should_exclude:
+                        columns_to_keep.append(col)
+                
+                df = df[columns_to_keep]
             
             return df
             
@@ -114,9 +141,53 @@ class PostProcessor:
         
         return df
     
+    def _expand_json_columns_merge(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Expand JSON objects using merge strategy - reuse columns for all rows.
+        
+        Args:
+            df: The DataFrame to process
+            
+        Returns:
+            DataFrame with JSON columns expanded without creating duplicates
+        """
+        # Step 1: Find all columns containing JSON and collect all unique keys
+        json_columns_data = {}  # {col_name: {row_idx: expanded_json}}
+        all_json_keys = set()
+        
+        for col in df.columns:
+            json_mask = df[col].apply(lambda x: isinstance(x, dict))
+            if json_mask.any():
+                json_columns_data[col] = {}
+                for idx in df[json_mask].index:
+                    json_obj = df.at[idx, col]
+                    expanded = self.json_expander.expand_json(json_obj)
+                    json_columns_data[col][idx] = expanded
+                    all_json_keys.update(expanded.keys())
+        
+        if not json_columns_data:
+            return df
+        
+        logger.debug(f"Merge strategy: Found JSON keys: {all_json_keys}")
+        
+        # Step 2: Create columns for all unique keys (only if they don't exist)
+        for key in all_json_keys:
+            if key not in df.columns:
+                df[key] = pd.NA
+        
+        # Step 3: Fill in values for each row
+        for col, row_data in json_columns_data.items():
+            for idx, expanded_data in row_data.items():
+                for key, value in expanded_data.items():
+                    df.at[idx, key] = value
+                # Clear the original JSON column value
+                df.at[idx, col] = ''
+        
+        return df
+    
     def _expand_json_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Expand JSON objects in DataFrame columns.
+        Expand JSON objects in DataFrame columns (original increment/skip strategy).
         
         Args:
             df: The DataFrame to process
@@ -151,15 +222,21 @@ class PostProcessor:
                 expanded = self.json_expander.expand_json(json_obj)
                 
                 for key, value in expanded.items():
-                    # Handle column name conflicts
-                    new_col_name = key
-                    counter = 1
-                    while new_col_name in df.columns or new_col_name in new_columns:
-                        new_col_name = f"{key}_{counter}"
-                        counter += 1
-                    
-                    new_columns.add(new_col_name)
-                    df.at[idx, new_col_name] = value
+                    if self.column_conflict_strategy == "skip":
+                        # Skip strategy: only add if column doesn't exist
+                        if key not in df.columns and key not in new_columns:
+                            new_columns.add(key)
+                            df.at[idx, key] = value
+                    else:  # increment strategy (default)
+                        # Handle column name conflicts
+                        new_col_name = key
+                        counter = 1
+                        while new_col_name in df.columns or new_col_name in new_columns:
+                            new_col_name = f"{key}_{counter}"
+                            counter += 1
+                        
+                        new_columns.add(new_col_name)
+                        df.at[idx, new_col_name] = value
             
             # Clear original JSON values after expansion
             df.loc[json_mask, col] = ''
@@ -185,5 +262,11 @@ class PostProcessor:
             json_expansion_depth=config.get("EXCEL_PROCESSING_JSON_EXPANSION_DEPTH", 1),
             process_only_html_columns=config.get(
                 "EXCEL_PROCESSING_ONLY_HTML_COLUMNS", True
+            ),
+            column_conflict_strategy=config.get(
+                "EXCEL_PROCESSING_COLUMN_CONFLICT_STRATEGY", "increment"
+            ),
+            exclude_column_prefixes=config.get(
+                "EXCEL_PROCESSING_EXCLUDE_COLUMN_PREFIXES", []
             ),
         )

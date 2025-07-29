@@ -31,6 +31,14 @@ EXCEL_PROCESSING_JSON_EXPANSION_DEPTH = 1
 
 # Performance optimization: only process columns containing HTML
 EXCEL_PROCESSING_ONLY_HTML_COLUMNS = True
+
+# Column conflict strategy when expanding JSON
+# Options: "increment" (adds _1, _2 suffixes), "skip" (ignores conflicts), "merge" (reuses columns)
+EXCEL_PROCESSING_COLUMN_CONFLICT_STRATEGY = "merge"
+
+# Exclude columns with these prefixes from export
+# Default: ["sc_"] to exclude internal/system columns
+EXCEL_PROCESSING_EXCLUDE_COLUMN_PREFIXES = ["sc_"]
 ```
 
 ## Example Transformations

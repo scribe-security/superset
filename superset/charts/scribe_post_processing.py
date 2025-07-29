@@ -27,6 +27,7 @@ from io import BytesIO, StringIO
 from typing import Any, Dict, Union
 
 import pandas as pd
+from flask import current_app
 
 from superset.utils.excel_processing import HtmlParser, JsonExpander, PostProcessor
 
@@ -83,11 +84,20 @@ def apply_scribe_post_process(
         else:
             df = pd.read_excel(BytesIO(data) if isinstance(data, bytes) else StringIO(data))
         
+        # Get configuration
+        config = current_app.config if current_app else {}
+        
         # Apply post-processing
         processor = PostProcessor(
             enable_html_parsing=True,
             json_expansion_depth=1,
             process_only_html_columns=False,  # Match original behavior
+            column_conflict_strategy=config.get(
+                "EXCEL_PROCESSING_COLUMN_CONFLICT_STRATEGY", "merge"
+            ),
+            exclude_column_prefixes=config.get(
+                "EXCEL_PROCESSING_EXCLUDE_COLUMN_PREFIXES", ["sc_"]
+            ),
         )
         df = processor.process_dataframe(df)
         

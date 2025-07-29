@@ -59,7 +59,7 @@ fi
 
 # Set environment variables
 export FLASK_APP=superset
-export SUPERSET_CONFIG_PATH=/Users/scribe/Projects/sps3/superset/superset_config_dev.py
+export SUPERSET_CONFIG_PATH=/Users/scribe/Projects/sps3/superset/development/config/superset_config_dev.py
 export FLASK_ENV=development
 export SUPERSET_ENV=development
 
