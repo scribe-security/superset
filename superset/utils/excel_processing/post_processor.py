@@ -170,18 +170,35 @@ class PostProcessor:
         
         logger.debug(f"Merge strategy: Found JSON keys: {all_json_keys}")
         
-        # Step 2: Create columns for all unique keys (only if they don't exist)
-        for key in all_json_keys:
-            if key not in df.columns:
-                df[key] = pd.NA
+        # Step 2: Build a DataFrame with expanded data to avoid fragmentation
+        # Create a dictionary to collect all updates
+        expanded_data = {key: pd.Series(index=df.index, dtype='object') for key in all_json_keys}
         
-        # Step 3: Fill in values for each row
+        # Fill in values from JSON expansion
         for col, row_data in json_columns_data.items():
-            for idx, expanded_data in row_data.items():
-                for key, value in expanded_data.items():
-                    df.at[idx, key] = value
-                # Clear the original JSON column value
-                df.at[idx, col] = ''
+            for idx, expanded_dict in row_data.items():
+                for key, value in expanded_dict.items():
+                    expanded_data[key][idx] = value
+        
+        # Create DataFrame from expanded data
+        expanded_df = pd.DataFrame(expanded_data)
+        
+        # Determine which columns are new
+        new_columns = [col for col in expanded_df.columns if col not in df.columns]
+        existing_columns = [col for col in expanded_df.columns if col in df.columns]
+        
+        # Add new columns to the original DataFrame
+        if new_columns:
+            df = pd.concat([df, expanded_df[new_columns]], axis=1)
+        
+        # Update existing columns with expanded values (where not null)
+        for col in existing_columns:
+            mask = expanded_df[col].notna()
+            df.loc[mask, col] = expanded_df.loc[mask, col]
+        
+        # Clear original JSON columns
+        for col in json_columns_data.keys():
+            df[col] = ''
         
         return df
     
@@ -206,8 +223,9 @@ class PostProcessor:
         
         logger.debug(f"Expanding JSON in columns: {json_columns}")
         
-        # Track new columns to avoid conflicts
-        new_columns: Set[str] = set()
+        # Collect all updates to apply in bulk to avoid fragmentation
+        updates = {}  # {column_name: {row_idx: value}}
+        new_columns_set: Set[str] = set()
         
         for col in json_columns:
             # Get rows where this column has JSON
@@ -224,22 +242,40 @@ class PostProcessor:
                 for key, value in expanded.items():
                     if self.column_conflict_strategy == "skip":
                         # Skip strategy: only add if column doesn't exist
-                        if key not in df.columns and key not in new_columns:
-                            new_columns.add(key)
-                            df.at[idx, key] = value
+                        if key not in df.columns and key not in new_columns_set:
+                            new_columns_set.add(key)
+                            if key not in updates:
+                                updates[key] = {}
+                            updates[key][idx] = value
                     else:  # increment strategy (default)
                         # Handle column name conflicts
                         new_col_name = key
                         counter = 1
-                        while new_col_name in df.columns or new_col_name in new_columns:
+                        while new_col_name in df.columns or new_col_name in new_columns_set:
                             new_col_name = f"{key}_{counter}"
                             counter += 1
                         
-                        new_columns.add(new_col_name)
-                        df.at[idx, new_col_name] = value
+                        new_columns_set.add(new_col_name)
+                        if new_col_name not in updates:
+                            updates[new_col_name] = {}
+                        updates[new_col_name][idx] = value
             
-            # Clear original JSON values after expansion
-            df.loc[json_mask, col] = ''
+            # Mark original JSON column for clearing
+            if col not in updates:
+                updates[col] = {}
+            for idx in df[json_mask].index:
+                updates[col][idx] = ''
+        
+        # Apply all updates in bulk to avoid fragmentation
+        # First, ensure all new columns exist
+        for col_name in updates.keys():
+            if col_name not in df.columns:
+                df[col_name] = pd.NA
+        
+        # Then apply all updates at once
+        for col_name, col_updates in updates.items():
+            for idx, value in col_updates.items():
+                df.at[idx, col_name] = value
         
         return df
     

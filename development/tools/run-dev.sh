@@ -39,6 +39,12 @@ fi
 # Navigate to the sps3 superset directory
 cd /Users/scribe/Projects/sps3/superset
 
+# Source MySQL environment if it exists
+if [ -f ".env.mysql" ]; then
+    echo "🔧 Loading MySQL environment..."
+    source .env.mysql
+fi
+
 # Activate virtual environment if it exists
 if [ -d "venv" ]; then
     echo "🐍 Activating virtual environment..."
@@ -53,6 +59,12 @@ fi
 if ! python -c "import flask_cors" 2>/dev/null; then
     echo "📦 Installing missing dependencies..."
     pip install --upgrade pip setuptools wheel
+    
+    # Ensure MySQL environment is set for mysqlclient
+    if [ -f ".env.mysql" ]; then
+        source .env.mysql
+    fi
+    
     pip install -r requirements/development.txt
     pip install -e .
 fi
@@ -62,6 +74,19 @@ export FLASK_APP=superset
 export SUPERSET_CONFIG_PATH=/Users/scribe/Projects/sps3/superset/development/config/superset_config_dev.py
 export FLASK_ENV=development
 export SUPERSET_ENV=development
+
+# CRITICAL: Set required environment variables for superset_config_base.py
+export SUPERSET_SECRET_KEY='dev-secret-key-change-in-production-$(date +%s)'
+export SUPERSET_DATABASE_URI='postgresql://airflow:airflow@localhost:7432/superset'
+export REDIS_HOST='localhost'
+export REDIS_PORT='6379'
+export REDIS_DB='0'
+export CSRF_ENABLED='false'  # Only for development
+
+echo "🔐 Environment variables set:"
+echo "   SUPERSET_SECRET_KEY: [SET]"
+echo "   SUPERSET_DATABASE_URI: postgresql://...@localhost:7432/superset"
+echo "   REDIS_HOST: localhost:6379"
 
 # Initialize Superset (only needs to be done once)
 if [ "$1" == "init" ]; then

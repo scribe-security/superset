@@ -115,3 +115,25 @@ report-celery-beat:
 
 admin-user:
 	superset fab create-admin
+
+
+# Test DataFrame fragmentation fix
+test-fragmentation-fix:
+	@echo "Testing DataFrame fragmentation fix..."
+	@if docker compose ps | grep -q "superset_app.*running"; then \
+		./test_fix_in_docker.sh; \
+	else \
+		echo "Starting Docker containers..."; \
+		docker compose up -d; \
+		sleep 10; \
+		./test_fix_in_docker.sh; \
+	fi
+
+test-with-db:
+	@echo "Testing with existing database data..."
+	@./test_with_existing_db.sh
+
+# Quick test without Docker
+test-fragmentation-local:
+	@echo "Testing locally (requires activated venv)..."
+	@python test_fragmentation_fix.py
