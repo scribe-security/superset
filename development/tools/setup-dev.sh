@@ -208,6 +208,29 @@ echo "📝 Creating Superset configuration file..."
 cat > superset_config.py << 'EOF'
 import os
 from celery.schedules import crontab
+from typing import Optional
+
+
+def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
+    """Get the environment variable or raise exception."""
+    try:
+        return os.environ[var_name]
+    except KeyError:
+        if default is not None:
+            return default
+        else:
+            error_msg = f"The environment variable {var_name} was missing, abort..."
+            raise OSError(error_msg)
+
+
+def get_env_bool(var_name: str, default: bool = False) -> bool:
+    """Get environment variable as boolean.
+    
+    Treats 'true', '1', 'yes' (case-insensitive) as True.
+    Everything else is False.
+    """
+    value = get_env_variable(var_name, str(default).lower())
+    return value.lower() in ("true", "1", "yes")
 
 # =============================================================================
 # DUAL DATABASE CONFIGURATION
@@ -230,9 +253,9 @@ GUEST_TOKEN_JWT_SECRET = '5kdonWCKada1swkrae2ODVI/rFZMBsOf8bwUpH50xuE='
 GLOBAL_ASYNC_QUERIES_JWT_SECRET = '5kdonWCKada1swkrae2ODVI/rFZMBsOf8bwUpH50xuE='
 
 # Redis configuration (shared instance from scribe2)
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
-REDIS_DB = os.environ.get("REDIS_DB", "2")
+REDIS_HOST = get_env_variable("REDIS_HOST", "localhost")
+REDIS_PORT = get_env_variable("REDIS_PORT", "6379")
+REDIS_DB = get_env_variable("REDIS_DB", "2")
 
 # Celery configuration
 class CeleryConfig:
@@ -255,17 +278,17 @@ class CeleryConfig:
 CELERY_CONFIG = CeleryConfig
 
 # Flask App configuration
-DEBUG = True
-FLASK_ENV = "development"
-SUPERSET_ENV = "development"
+DEBUG = get_env_bool("FLASK_DEBUG", default=True)
+FLASK_ENV = get_env_variable("FLASK_ENV", "development")
+SUPERSET_ENV = get_env_variable("SUPERSET_ENV", "development")
 
 # Superset specific config
 APP_NAME = "Superset"
 APP_ICON = "/static/assets/images/superset-logo-horiz.png"
 
 # Allow data upload functionality
-UPLOAD_ENABLED = True
-UPLOAD_FOLDER = '/tmp/'
+UPLOAD_ENABLED = get_env_bool("UPLOAD_ENABLED", default=True)
+UPLOAD_FOLDER = get_env_variable("UPLOAD_FOLDER", "/tmp/")
 ALLOWED_EXTENSIONS = {'csv', 'tsv', 'txt', 'xls', 'xlsx', 'json'}
 
 # Feature flags
@@ -282,14 +305,14 @@ FEATURE_FLAGS = {
 }
 
 # Disable CSRF for development (set to True in production!)
-WTF_CSRF_ENABLED = False
+WTF_CSRF_ENABLED = get_env_bool("WTF_CSRF_ENABLED", default=False)
 
 # SQL Lab settings
 SQLLAB_TIMEOUT = 300
 SUPERSET_WEBSERVER_TIMEOUT = 300
 
 # Map settings
-MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY", "")
+MAPBOX_API_KEY = get_env_variable("MAPBOX_API_KEY", "")
 
 # Cache configuration (using shared Redis)
 CACHE_CONFIG = {

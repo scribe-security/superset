@@ -17,6 +17,7 @@
 
 """Post-processing utilities for Excel/CSV exports."""
 
+import json
 import logging
 from typing import Any, Dict, List, Optional, Set
 
@@ -24,285 +25,278 @@ import pandas as pd
 from flask import current_app
 
 from .html_parser import HtmlParser
-from .json_expander import JsonExpander
 
 logger = logging.getLogger(__name__)
 
+DETAILS_PREFIX = "Details/"
+CLEAR_JSON_SOURCES_AFTER_FLATTEN = True  # clear only where JSON was parsed
 
+
+# -------------------------
+# Helpers
+# -------------------------
+def _is_jsonish_string(val: Any) -> bool:
+    return isinstance(val, str) and val.strip()[:1] in ("{", "[") and val.strip()[-1:] in ("}", "]")
+
+
+def _parse_json_safe(val: Any) -> Any:
+    if not isinstance(val, str):
+        return val
+    s = val.strip()
+    if not (s.startswith("{") and s.endswith("}")) and not (s.startswith("[") and s.endswith("]")):
+        return val
+    try:
+        return json.loads(s)
+    except Exception:
+        try:
+            import ast
+            return ast.literal_eval(s)
+        except Exception:
+            return val
+
+
+def _is_effectively_empty(v: Any) -> bool:
+    # NEW: treat pandas NA/NaT/None/np.nan as empty, regardless of dtype
+    try:
+        if pd.isna(v):
+            return True
+    except Exception:
+        pass
+    if isinstance(v, str) and v.strip() == "":
+        return True
+    if isinstance(v, (list, dict)) and len(v) == 0:
+        return True
+    return False
+
+
+# -------------------------
+# JSON Flattener
+# -------------------------
+class JsonFlattener:
+    """Flatten dict/list deeply into Details/<path> columns.
+       - Normalize keys by cutting before first ':' (e.g., 'CWEs: ...' -> 'CWEs')
+       - Skip keys starting with 'sc_'
+       - Lists of primitives -> JSON string at leaf
+       - Lists of objects -> index in path
+    """
+
+    @staticmethod
+    def _norm(key: str) -> str:
+        key = str(key)
+        return key.split(":", 1)[0].strip() if ":" in key else key.strip()
+
+    @staticmethod
+    def _skip(key: str) -> bool:
+        return key.startswith("sc_")
+
+    def flatten(self, data: Any, parent: str = "") -> Dict[str, Any]:
+        out: Dict[str, Any] = {}
+
+        if data is None:
+            return out
+
+        if isinstance(data, dict):
+            for k, v in data.items():
+                k_norm = self._norm(k)
+                if self._skip(k_norm):
+                    continue
+                path = f"{parent}/{k_norm}" if parent else k_norm
+                if isinstance(v, (dict, list)):
+                    out.update(self.flatten(v, path))
+                else:
+                    out[path] = v
+            return out
+
+        if isinstance(data, list):
+            if all(isinstance(i, (str, int, float, bool, type(None))) for i in data):
+                # primitives -> store JSON string
+                out[parent] = json.dumps(data)
+                return out
+            for i, item in enumerate(data):
+                path = f"{parent}/{i}" if parent else str(i)
+                out.update(self.flatten(item, path))
+            return out
+
+        out[parent] = data
+        return out
+
+
+# -------------------------
+# PostProcessor
+# -------------------------
 class PostProcessor:
     """Main post-processor for Excel/CSV exports."""
-    
+
     def __init__(
         self,
         enable_html_parsing: bool = True,
-        json_expansion_depth: int = 1,
+        json_expansion_depth: int = 1,  # kept for compatibility (we flatten fully)
         process_only_html_columns: bool = True,
-        column_conflict_strategy: str = "increment",
+        column_conflict_strategy: str = "increment",  # kept for compatibility
         exclude_column_prefixes: Optional[List[str]] = None,
     ) -> None:
-        """
-        Initialize the post-processor.
-        
-        Args:
-            enable_html_parsing: Whether to enable HTML parsing
-            json_expansion_depth: Depth for JSON expansion (0 = disabled)
-            process_only_html_columns: Only process columns that contain HTML
-            column_conflict_strategy: How to handle column name conflicts
-                - "increment": Add number suffix (current behavior)
-                - "skip": Skip conflicting columns
-                - "merge": Reuse existing columns
-            exclude_column_prefixes: List of column prefixes to exclude from export
-        """
         self.enable_html_parsing = enable_html_parsing
         self.json_expansion_depth = json_expansion_depth
         self.process_only_html_columns = process_only_html_columns
         self.column_conflict_strategy = column_conflict_strategy
         self.exclude_column_prefixes = exclude_column_prefixes or []
-        
+
         self.html_parser = HtmlParser()
-        self.json_expander = JsonExpander(max_depth=json_expansion_depth)
-    
+        self.flattener = JsonFlattener()
+
+    # -------- public --------
     def process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Process a DataFrame for Excel/CSV export.
-        
-        Args:
-            df: The DataFrame to process
-            
-        Returns:
-            Processed DataFrame with HTML parsed and JSON expanded
-        """
         if df.empty:
             return df
-        
+
         try:
-            # Step 1: Parse HTML content
+            protected_cols: Set[str] = set(df.columns)
+            logger.debug("PostProcessor: start with %d rows, %d columns", len(df), len(df.columns))
+
+            # 1) HTML parse
             if self.enable_html_parsing and self.html_parser.is_available:
                 df = self._process_html_columns(df)
-            
-            # Step 2: Expand JSON columns
-            if self.json_expansion_depth > 0:
-                if self.column_conflict_strategy == "merge":
-                    df = self._expand_json_columns_merge(df)
-                else:
-                    df = self._expand_json_columns(df)
-            
-            # Step 3: Remove duplicate columns
+
+            # 2) JSON flatten into Details/*
+            df = self._flatten_json_columns(df, protected_cols)
+
+            # 3) dedupe columns
             df = df.loc[:, ~df.columns.duplicated()]
-            
-            # Step 4: Filter out columns with excluded prefixes
+
+            # 4) drop empty Details/*
+            df = self._drop_empty_details_columns(df)
+
+            # 5) apply excludes
             if self.exclude_column_prefixes:
-                columns_to_keep = []
-                for col in df.columns:
-                    should_exclude = False
-                    for prefix in self.exclude_column_prefixes:
-                        if col.startswith(prefix):
-                            should_exclude = True
-                            logger.debug(f"Excluding column '{col}' (starts with '{prefix}')")
-                            break
-                    if not should_exclude:
-                        columns_to_keep.append(col)
-                
-                df = df[columns_to_keep]
-            
+                keep = [c for c in df.columns if not any(c.startswith(p) for p in self.exclude_column_prefixes)]
+                df = df[keep]
+
+            logger.debug("PostProcessor: finished with %d columns (Details/*: %d)",
+                         len(df.columns), sum(1 for c in df.columns if c.startswith(DETAILS_PREFIX)))
             return df
-            
+
         except Exception as e:
-            logger.error(f"Error during post-processing: {e}")
-            # Return original DataFrame on error
+            logger.error("PostProcessor: error during post-processing: %s", e)
             return df
-    
+
+    # -------- steps --------
     def _process_html_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Process HTML content in DataFrame columns.
-        
-        Args:
-            df: The DataFrame to process
-            
-        Returns:
-            DataFrame with HTML content parsed
-        """
-        if self.process_only_html_columns:
-            # Only process object (string) columns that might contain HTML
-            columns_to_process = []
-            for col in df.select_dtypes(include=['object']).columns:
-                # Check if any value in the column looks like HTML
-                if df[col].apply(self.html_parser.is_html_content).any():
-                    columns_to_process.append(col)
-            
-            logger.debug(f"Processing HTML in columns: {columns_to_process}")
-            
-            for col in columns_to_process:
-                df[col] = df[col].apply(self.html_parser.parse_cell_content)
-        else:
-            # Process all columns
-            for col in df.columns:
-                df[col] = df[col].apply(self.html_parser.parse_cell_content)
-        
-        return df
-    
-    def _expand_json_columns_merge(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Expand JSON objects using merge strategy - reuse columns for all rows.
-        
-        Args:
-            df: The DataFrame to process
-            
-        Returns:
-            DataFrame with JSON columns expanded without creating duplicates
-        """
-        # Step 1: Find all columns containing JSON and collect all unique keys
-        json_columns_data = {}  # {col_name: {row_idx: expanded_json}}
-        all_json_keys = set()
-        
-        for col in df.columns:
-            json_mask = df[col].apply(lambda x: isinstance(x, dict))
-            if json_mask.any():
-                json_columns_data[col] = {}
-                for idx in df[json_mask].index:
-                    json_obj = df.at[idx, col]
-                    expanded = self.json_expander.expand_json(json_obj)
-                    json_columns_data[col][idx] = expanded
-                    all_json_keys.update(expanded.keys())
-        
-        if not json_columns_data:
-            return df
-        
-        logger.debug(f"Merge strategy: Found JSON keys: {all_json_keys}")
-        
-        # Step 2: Build a DataFrame with expanded data to avoid fragmentation
-        # Create a dictionary to collect all updates
-        expanded_data = {key: pd.Series(index=df.index, dtype='object') for key in all_json_keys}
-        
-        # Fill in values from JSON expansion
-        for col, row_data in json_columns_data.items():
-            for idx, expanded_dict in row_data.items():
-                for key, value in expanded_dict.items():
-                    expanded_data[key][idx] = value
-        
-        # Create DataFrame from expanded data
-        expanded_df = pd.DataFrame(expanded_data)
-        
-        # Determine which columns are new
-        new_columns = [col for col in expanded_df.columns if col not in df.columns]
-        existing_columns = [col for col in expanded_df.columns if col in df.columns]
-        
-        # Add new columns to the original DataFrame
-        if new_columns:
-            df = pd.concat([df, expanded_df[new_columns]], axis=1)
-        
-        # Update existing columns with expanded values (where not null)
-        for col in existing_columns:
-            mask = expanded_df[col].notna()
-            df.loc[mask, col] = expanded_df.loc[mask, col]
-        
-        # Clear original JSON columns
-        for col in json_columns_data.keys():
-            df[col] = ''
-        
-        return df
-    
-    def _expand_json_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Expand JSON objects in DataFrame columns (original increment/skip strategy).
-        
-        Args:
-            df: The DataFrame to process
-            
-        Returns:
-            DataFrame with JSON columns expanded
-        """
-        # Find columns containing JSON dictionaries
-        json_columns: List[str] = []
-        for col in df.columns:
-            if df[col].apply(lambda x: isinstance(x, dict)).any():
-                json_columns.append(col)
-        
-        if not json_columns:
-            return df
-        
-        logger.debug(f"Expanding JSON in columns: {json_columns}")
-        
-        # Collect all updates to apply in bulk to avoid fragmentation
-        updates = {}  # {column_name: {row_idx: value}}
-        new_columns_set: Set[str] = set()
-        
-        for col in json_columns:
-            # Get rows where this column has JSON
-            json_mask = df[col].apply(lambda x: isinstance(x, dict))
-            
-            if not json_mask.any():
+        out = df.copy()
+        cols = list(out.select_dtypes(include=["object"]).columns) if self.process_only_html_columns else list(out.columns)
+
+        parsed_cols = 0
+        for col in cols:
+            s = out[col]
+            if s.dtype != "object":
                 continue
-            
-            # Expand JSON for rows that have it
-            for idx in df[json_mask].index:
-                json_obj = df.at[idx, col]
-                expanded = self.json_expander.expand_json(json_obj)
-                
-                for key, value in expanded.items():
-                    if self.column_conflict_strategy == "skip":
-                        # Skip strategy: only add if column doesn't exist
-                        if key not in df.columns and key not in new_columns_set:
-                            new_columns_set.add(key)
-                            if key not in updates:
-                                updates[key] = {}
-                            updates[key][idx] = value
-                    else:  # increment strategy (default)
-                        # Handle column name conflicts
-                        new_col_name = key
-                        counter = 1
-                        while new_col_name in df.columns or new_col_name in new_columns_set:
-                            new_col_name = f"{key}_{counter}"
-                            counter += 1
-                        
-                        new_columns_set.add(new_col_name)
-                        if new_col_name not in updates:
-                            updates[new_col_name] = {}
-                        updates[new_col_name][idx] = value
-            
-            # Mark original JSON column for clearing
-            if col not in updates:
-                updates[col] = {}
-            for idx in df[json_mask].index:
-                updates[col][idx] = ''
-        
-        # Apply all updates in bulk to avoid fragmentation
-        # First, ensure all new columns exist
-        for col_name in updates.keys():
-            if col_name not in df.columns:
-                df[col_name] = pd.NA
-        
-        # Then apply all updates at once
-        for col_name, col_updates in updates.items():
-            for idx, value in col_updates.items():
-                df.at[idx, col_name] = value
-        
+            mask = s.apply(self.html_parser.is_html_content)
+            if not mask.any():
+                continue
+
+            logger.debug("HTML: parsing column '%s' (%d html cells)", col, mask.sum())
+            parsed = s[mask].apply(self.html_parser.parse_cell_content)
+            out.loc[mask, col] = parsed
+            parsed_cols += 1
+
+        if parsed_cols:
+            logger.debug("HTML: parsed %d column(s)", parsed_cols)
+        return out
+
+    def _find_jsonish_columns(self, df: pd.DataFrame) -> List[str]:
+        cols: List[str] = []
+        for col in df.columns:
+            s = df[col]
+            if s.apply(lambda x: isinstance(x, (dict, list)) or _is_jsonish_string(x)).any():
+                cols.append(col)
+        return cols
+
+    def _flatten_json_columns(self, df: pd.DataFrame, protected_columns: Set[str]) -> pd.DataFrame:
+        json_cols = self._find_jsonish_columns(df)
+        if not json_cols:
+            logger.debug("JSON: no json-like columns found")
+            return df
+
+        logger.debug("JSON: found json-like columns: %s", json_cols)
+
+        per_row: Dict[int, Dict[str, Any]] = {}
+
+        for col in json_cols:
+            s = df[col]
+            affected = 0
+            for idx, raw in s.items():
+                val = _parse_json_safe(raw) if isinstance(raw, str) else raw
+                if isinstance(val, (dict, list)) and val:
+                    flat = self.flattener.flatten(val, parent="")
+                    if flat:
+                        if idx not in per_row:
+                            per_row[idx] = {}
+                        for k, v in flat.items():
+                            details_k = f"{DETAILS_PREFIX}{k}"
+                            per_row[idx][details_k] = v
+                        affected += 1
+            if affected:
+                logger.debug("JSON: column '%s' -> parsed %d row(s)", col, affected)
+
+        if not per_row:
+            logger.debug("JSON: nothing to flatten")
+            return df
+
+        # discover populated columns
+        populated: Set[str] = set()
+        for m in per_row.values():
+            for k, v in m.items():
+                if not _is_effectively_empty(v):
+                    populated.add(k)
+
+        if not populated:
+            logger.debug("JSON: flattened only empty values; skipping column creation")
+            return df
+
+        # create columns as object dtype
+        for col in sorted(populated):
+            if col not in df.columns:
+                df[col] = pd.Series([pd.NA] * len(df), dtype="object")
+
+        # fill with "fill-when-empty" rule
+        for idx, m in per_row.items():
+            for k, v in m.items():
+                if k not in populated:
+                    continue
+                if _is_effectively_empty(df.at[idx, k]):
+                    df.at[idx, k] = v
+
+        # clear the source cells where JSON was detected
+        if CLEAR_JSON_SOURCES_AFTER_FLATTEN:
+            for col in json_cols:
+                s = df[col]
+                mask = s.apply(lambda x: isinstance(x, (dict, list)) or _is_jsonish_string(x))
+                if mask.any():
+                    df.loc[mask, col] = ""  # do not drop column; just clear affected cells
+
         return df
-    
+
+    def _drop_empty_details_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        to_drop: List[str] = []
+        for c in df.columns:
+            if not c.startswith(DETAILS_PREFIX):
+                continue
+            ser = df[c]
+            if (ser.isna().all()) or (ser.astype(str).str.strip() == "").all():
+                to_drop.append(c)
+        if to_drop:
+            logger.debug("JSON: dropping empty Details/* columns: %s", to_drop)
+            df = df.drop(columns=to_drop)
+        return df
+
+    # -------- factory --------
     @classmethod
     def from_config(cls, config: Optional[Dict[str, Any]] = None) -> "PostProcessor":
-        """
-        Create a PostProcessor from Flask configuration.
-        
-        Args:
-            config: Optional config dict (uses Flask config if not provided)
-            
-        Returns:
-            Configured PostProcessor instance
-        """
         if config is None:
             config = current_app.config if current_app else {}
-        
         return cls(
             enable_html_parsing=config.get("EXCEL_PROCESSING_ENABLE_HTML_PARSING", True),
             json_expansion_depth=config.get("EXCEL_PROCESSING_JSON_EXPANSION_DEPTH", 1),
-            process_only_html_columns=config.get(
-                "EXCEL_PROCESSING_ONLY_HTML_COLUMNS", True
-            ),
-            column_conflict_strategy=config.get(
-                "EXCEL_PROCESSING_COLUMN_CONFLICT_STRATEGY", "increment"
-            ),
-            exclude_column_prefixes=config.get(
-                "EXCEL_PROCESSING_EXCLUDE_COLUMN_PREFIXES", []
-            ),
+            process_only_html_columns=config.get("EXCEL_PROCESSING_ONLY_HTML_COLUMNS", True),
+            column_conflict_strategy=config.get("EXCEL_PROCESSING_COLUMN_CONFLICT_STRATEGY", "increment"),
+            exclude_column_prefixes=config.get("EXCEL_PROCESSING_EXCLUDE_COLUMN_PREFIXES", []),
         )
