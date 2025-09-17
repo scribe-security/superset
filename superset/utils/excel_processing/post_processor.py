@@ -18,15 +18,12 @@
 """Post-processing utilities for Excel/CSV exports."""
 
 import json
-import logging
 from typing import Any, Dict, List, Optional, Set
 
 import pandas as pd
 from flask import current_app
 
 from .html_parser import HtmlParser
-
-logger = logging.getLogger(__name__)
 
 DETAILS_PREFIX = "Details/"
 CLEAR_JSON_SOURCES_AFTER_FLATTEN = True  # clear only where JSON was parsed
@@ -151,7 +148,6 @@ class PostProcessor:
 
         try:
             protected_cols: Set[str] = set(df.columns)
-            logger.debug("PostProcessor: start with %d rows, %d columns", len(df), len(df.columns))
 
             # 1) HTML parse
             if self.enable_html_parsing and self.html_parser.is_available:
@@ -171,12 +167,9 @@ class PostProcessor:
                 keep = [c for c in df.columns if not any(c.startswith(p) for p in self.exclude_column_prefixes)]
                 df = df[keep]
 
-            logger.debug("PostProcessor: finished with %d columns (Details/*: %d)",
-                         len(df.columns), sum(1 for c in df.columns if c.startswith(DETAILS_PREFIX)))
             return df
 
         except Exception as e:
-            logger.error("PostProcessor: error during post-processing: %s", e)
             return df
 
     # -------- steps --------
@@ -193,13 +186,10 @@ class PostProcessor:
             if not mask.any():
                 continue
 
-            logger.debug("HTML: parsing column '%s' (%d html cells)", col, mask.sum())
             parsed = s[mask].apply(self.html_parser.parse_cell_content)
             out.loc[mask, col] = parsed
             parsed_cols += 1
 
-        if parsed_cols:
-            logger.debug("HTML: parsed %d column(s)", parsed_cols)
         return out
 
     def _find_jsonish_columns(self, df: pd.DataFrame) -> List[str]:
@@ -213,10 +203,7 @@ class PostProcessor:
     def _flatten_json_columns(self, df: pd.DataFrame, protected_columns: Set[str]) -> pd.DataFrame:
         json_cols = self._find_jsonish_columns(df)
         if not json_cols:
-            logger.debug("JSON: no json-like columns found")
             return df
-
-        logger.debug("JSON: found json-like columns: %s", json_cols)
 
         per_row: Dict[int, Dict[str, Any]] = {}
 
@@ -234,11 +221,8 @@ class PostProcessor:
                             details_k = f"{DETAILS_PREFIX}{k}"
                             per_row[idx][details_k] = v
                         affected += 1
-            if affected:
-                logger.debug("JSON: column '%s' -> parsed %d row(s)", col, affected)
 
         if not per_row:
-            logger.debug("JSON: nothing to flatten")
             return df
 
         # discover populated columns
@@ -249,7 +233,6 @@ class PostProcessor:
                     populated.add(k)
 
         if not populated:
-            logger.debug("JSON: flattened only empty values; skipping column creation")
             return df
 
         # create columns as object dtype
@@ -284,7 +267,6 @@ class PostProcessor:
             if (ser.isna().all()) or (ser.astype(str).str.strip() == "").all():
                 to_drop.append(c)
         if to_drop:
-            logger.debug("JSON: dropping empty Details/* columns: %s", to_drop)
             df = df.drop(columns=to_drop)
         return df
 

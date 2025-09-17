@@ -19,7 +19,6 @@
 
 import html
 import json
-import logging
 import re
 from typing import Any, Dict, Optional, Union
 
@@ -28,8 +27,6 @@ try:
     HAS_BEAUTIFULSOUP = True
 except ImportError:
     HAS_BEAUTIFULSOUP = False
-
-logger = logging.getLogger(__name__)
 
 
 class HtmlParser:
@@ -44,10 +41,7 @@ class HtmlParser:
 
     def __init__(self) -> None:
         if not HAS_BEAUTIFULSOUP:
-            logger.warning(
-                "BeautifulSoup4 is not installed. HTML parsing will be disabled. "
-                "Install with: pip install beautifulsoup4"
-            )
+            pass  # BeautifulSoup4 is not installed
 
     @property
     def is_available(self) -> bool:
@@ -69,22 +63,18 @@ class HtmlParser:
             # (1) Try to extract JSON from data-info
             json_obj = self._extract_json_from_data_info(soup)
             if json_obj is not None:
-                logger.debug("HtmlParser: extracted data-info JSON keys: %s", list(json_obj.keys())[:10])
                 return json_obj
 
             # (2) Try tooltip string after '|'
             tooltip_after_bar = self._extract_tooltip_after_bar(soup)
             if tooltip_after_bar is not None:
-                logger.debug("HtmlParser: extracted tooltip text after '|': %s", tooltip_after_bar[:80])
                 return tooltip_after_bar
 
             # (3) Fallback: visible text
             text = soup.get_text(" ", strip=True)
-            logger.debug("HtmlParser: fallback text used")
             return text
 
         except Exception as e:
-            logger.debug("HtmlParser: failed to parse HTML (returning original). Error: %s", e)
             return content
 
     # ----- internals -----
@@ -118,7 +108,6 @@ class HtmlParser:
             if isinstance(parsed, dict):
                 return parsed
         except Exception:
-            logger.debug("HtmlParser: data-info present but not valid JSON")
             return None
 
         return None
