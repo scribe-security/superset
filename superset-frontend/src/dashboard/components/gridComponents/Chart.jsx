@@ -369,7 +369,11 @@ class Chart extends Component {
       slice_id: this.props.slice.slice_id,
       is_cached: this.props.isCached,
     });
-    const resultType = isPivot ? 'post_processed' : (isFullCSV ? 'full' : 'results');
+    const resultType = isPivot
+      ? 'post_processed'
+      : isFullCSV
+        ? 'full'
+        : 'results';
     exportChart({
       formData: isFullCSV
         ? { ...this.props.formData, row_limit: this.props.maxRows }
