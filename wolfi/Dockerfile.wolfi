@@ -70,6 +70,7 @@ ENV PATH="/app/venv/bin:$PATH"
 RUN pip3.11 install --upgrade pip setuptools wheel flask-cors && \
   # Install requirements from base.txt first
   pip3.11 install -r /app/requirements/base.txt && \
+  pip3.11 install pillow==10.3.0 && \
   # Now force upgrade only gunicorn to avoid conflicts
   pip3.11 install --upgrade --force-reinstall gunicorn==23.0.0 && \
   # Only upgrade packages that don't conflict with base.txt
