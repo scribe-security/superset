@@ -151,11 +151,11 @@ export interface SliceHeaderControlsProps {
   logExploreChart?: (sliceId: number) => void;
   logEvent?: (eventName: string, eventData?: object) => void;
   toggleExpandSlice?: (sliceId: number) => void;
-  exportCSV?: (sliceId: number) => void;
-  exportPivotCSV?: (sliceId: number) => void;
-  exportFullCSV?: (sliceId: number) => void;
-  exportXLSX?: (sliceId: number) => void;
-  exportFullXLSX?: (sliceId: number) => void;
+  exportCSV?: () => void;
+  exportPivotCSV?: () => void;
+  exportFullCSV?: () => void;
+  exportXLSX?: () => void;
+  exportFullXLSX?: () => void;
   handleToggleFullSize: () => void;
 
   addDangerToast: (message: string) => void;
@@ -610,26 +610,26 @@ const SliceHeaderControls = (props: SliceHeaderControlsPropsWithRouter) => {
         break;
       case MenuKeys.ExportCsv:
         // eslint-disable-next-line no-unused-expressions
-        props.exportCSV?.(props.slice.slice_id);
+        props.exportCSV?.();
         break;
       case MenuKeys.ExportPivotCsv:
         // eslint-disable-next-line no-unused-expressions
-        props.exportPivotCSV?.(props.slice.slice_id);
+        props.exportPivotCSV?.();
         break;
       case MenuKeys.Fullscreen:
         props.handleToggleFullSize();
         break;
       case MenuKeys.ExportFullCsv:
         // eslint-disable-next-line no-unused-expressions
-        props.exportFullCSV?.(props.slice.slice_id);
+        props.exportFullCSV?.();
         break;
       case MenuKeys.ExportFullXlsx:
         // eslint-disable-next-line no-unused-expressions
-        props.exportFullXLSX?.(props.slice.slice_id);
+        props.exportFullXLSX?.();
         break;
       case MenuKeys.ExportXlsx:
         // eslint-disable-next-line no-unused-expressions
-        props.exportXLSX?.(props.slice.slice_id);
+        props.exportXLSX?.();
         break;
       case MenuKeys.DownloadAsImage: {
         // menu closes with a delay, we need to hide it manually,

@@ -202,11 +202,18 @@ const buildQuery: BuildQuery<TableChartFormData> = (
 
     const moreProps: Partial<QueryObject> = {};
     const ownState = options?.ownState ?? {};
-    if (formDataCopy.server_pagination) {
+    // Check if user wants to download full dataset vs current page
+    const isFetchingFullDataset = formDataCopy.result_type === 'full';
+    if (formDataCopy.server_pagination && !isFetchingFullDataset) {
+      // Normal pagination: limit to current page
       moreProps.row_limit =
         ownState.pageSize ?? formDataCopy.server_page_length;
       moreProps.row_offset =
         (ownState.currentPage ?? 0) * (ownState.pageSize ?? 0);
+    } else if (isFetchingFullDataset) {
+      // Full export: fetch all rows from DB
+      moreProps.row_limit = 0; // 0 = no limit
+      moreProps.row_offset = 0; // start from beginning
     }
 
     if (!temporalColumn) {
